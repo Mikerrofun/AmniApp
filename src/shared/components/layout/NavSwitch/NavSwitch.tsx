@@ -22,7 +22,7 @@ export default function NavSwitch({ state }: BottomTabBarProps) {
   return (
     <View
       style={{ paddingBottom: insets.bottom }}
-      className="w-full rounded-t-lg border-t border-white/5 bg-card"
+      className="w-full rounded-t-xl border-t border-white/5 bg-card"
     >
       <SwitchGlobal
         equalWidth
@@ -44,7 +44,7 @@ export default function NavSwitch({ state }: BottomTabBarProps) {
             </Text>
           ),
         }))}
-        className="w-full bg-card p-2"
+        className="w-full bg-card"
         sliderClassName="bg-accent"
       />
     </View>

@@ -3,7 +3,7 @@ import { Easing, useSharedValue, withTiming } from 'react-native-reanimated';
 
 export type SwitchItemLayout = { x: number; width: number; height: number };
 
-const TIMING = { duration: 300, easing: Easing.out(Easing.cubic) };
+const TIMING = { duration: 450, easing: Easing.out(Easing.cubic) };
 
 /**
  * RN-замена DOM-механики веб-версии: вместо рефов и ResizeObserver —

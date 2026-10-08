@@ -28,7 +28,7 @@ export function SwitchGlobal({
     <View
       accessibilityRole="tablist"
       className={cn(
-        'relative flex-row items-center rounded-md',
+        'relative flex-row items-center overflow-hidden rounded-xl',
         equalWidth ? 'w-full' : 'self-start',
         className,
       )}
@@ -40,7 +40,7 @@ export function SwitchGlobal({
         pointerEvents="none"
         style={[{ position: 'absolute', top: 0 }, indicatorStyle]}
       >
-        <View className={cn('h-full w-full rounded-md bg-accent', sliderClassName)} />
+        <View className={cn('h-full w-full rounded-xl bg-accent', sliderClassName)} />
       </Animated.View>
       {options.map((option) => {
         const isActive = option.key === value;
