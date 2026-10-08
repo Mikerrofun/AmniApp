@@ -1,23 +1,16 @@
 import { Tabs } from 'expo-router';
-import { Text } from 'react-native';
+
+import NavSwitch from '@/shared/components/layout/NavSwitch/NavSwitch';
 
 export default function TabsLayout() {
   return (
-    <Tabs screenOptions={{ tabBarActiveTintColor: '#2563eb' }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Chats',
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>💬</Text>,
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: 'Settings',
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>⚙️</Text>,
-        }}
-      />
+    <Tabs
+      screenOptions={{ headerShown: false }}
+      tabBar={(props) => <NavSwitch {...props} />}
+    >
+      <Tabs.Screen name="chat" options={{ title: 'Чат' }} />
+      <Tabs.Screen name="api" options={{ title: 'API' }} />
+      <Tabs.Screen name="check" options={{ title: 'FastCheck' }} />
     </Tabs>
   );
 }
