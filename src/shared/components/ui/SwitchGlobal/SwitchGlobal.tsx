@@ -1,10 +1,11 @@
-import { Pressable, View } from 'react-native';
-import Animated, { useAnimatedStyle } from 'react-native-reanimated';
+import { View } from "react-native";
+import Animated, { useAnimatedStyle } from "react-native-reanimated";
 
-import { cn } from '@/shared/lib/cn';
+import { SwitcherButton } from "@/shared/components/ui/SwitcherButton";
+import { cn } from "@/shared/lib/cn";
 
-import { useSwitchGlobalHook } from './SwitchGlobal.hooks';
-import type { SwitchGlobalProps } from './SwitchGlobal.types';
+import { useSwitchGlobalHook } from "./SwitchGlobal.hooks";
+import type { SwitchGlobalProps } from "./SwitchGlobal.types";
 
 export function SwitchGlobal({
   options,
@@ -28,37 +29,36 @@ export function SwitchGlobal({
     <View
       accessibilityRole="tablist"
       className={cn(
-        'relative flex-row items-center overflow-hidden rounded-xl',
-        equalWidth ? 'w-full' : 'self-start',
+        "relative flex-row items-center overflow-hidden rounded-xl",
+        equalWidth ? "w-full" : "self-start",
         className,
       )}
     >
-      {/* Геометрия — на Animated.View через inline-стиль (NativeWind не
-          применяет className к обёрнутым reanimated-компонентам), визуал —
-          на обычном внутреннем View. */}
       <Animated.View
         pointerEvents="none"
-        style={[{ position: 'absolute', top: 0 }, indicatorStyle]}
+        style={[{ position: "absolute", top: 0 }, indicatorStyle]}
       >
-        <View className={cn('h-full w-full rounded-xl bg-accent', sliderClassName)} />
+        <View
+          className={cn("h-full w-full rounded-xl bg-accent", sliderClassName)}
+        />
       </Animated.View>
       {options.map((option) => {
         const isActive = option.key === value;
         return (
-          <Pressable
+          <SwitcherButton
             key={option.key}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: isActive }}
-            aria-selected={isActive}
-            accessibilityLabel={option.key}
+            optionKey={option.key}
+            isActive={isActive}
+            equalWidth={equalWidth}
             onPress={() => {
               if (!isActive) onChange?.(option.key);
             }}
-            onLayout={(event) => onItemLayout(option.key, event.nativeEvent.layout)}
-            className={cn(equalWidth && 'flex-1', 'items-center justify-center')}
+            onLayout={(event) =>
+              onItemLayout(option.key, event.nativeEvent.layout)
+            }
           >
             {option.component}
-          </Pressable>
+          </SwitcherButton>
         );
       })}
     </View>

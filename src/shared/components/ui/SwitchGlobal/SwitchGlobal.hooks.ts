@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef } from 'react';
-import { Easing, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useCallback, useEffect, useRef } from "react";
+import { Easing, useSharedValue, withTiming } from "react-native-reanimated";
 
 export type SwitchItemLayout = { x: number; width: number; height: number };
 
@@ -24,9 +24,6 @@ export function useSwitchGlobalHook(value: string) {
 
       // Первое измерение — ставим значение сразу, чтобы индикатор
       // не «прилетал» из нуля; дальше — анимируем.
-      // Мутация .value — официальный API reanimated shared values;
-      // react-hooks/immutability не знает о мутабельных ref-обёртках.
-      /* eslint-disable react-hooks/immutability */
       if (!animate || !hasMeasured.current) {
         left.value = layout.x;
         width.value = layout.width;
@@ -38,7 +35,6 @@ export function useSwitchGlobalHook(value: string) {
       left.value = withTiming(layout.x, TIMING);
       width.value = withTiming(layout.width, TIMING);
       height.value = withTiming(layout.height, TIMING);
-      /* eslint-enable react-hooks/immutability */
     },
     [value, left, width, height],
   );
@@ -51,7 +47,6 @@ export function useSwitchGlobalHook(value: string) {
     [syncIndicator],
   );
 
-  // Пересчёт при смене активной опции.
   useEffect(() => {
     syncIndicator(hasMeasured.current);
   }, [syncIndicator]);
