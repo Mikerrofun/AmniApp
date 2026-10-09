@@ -15,8 +15,6 @@ import type { ChatSidebarProps } from './ChatSidebar.types';
 const ANIMATION_DURATION = 260;
 /** Контент панели начинается ниже кнопки-триггера (12 + 30 + зазор) */
 const CONTENT_TOP_OFFSET = 56;
-/** Зазор между низом панели и верхом нижней навигации */
-const PANEL_BOTTOM_GAP = 5;
 /** Скругление нижних углов панели */
 const PANEL_BOTTOM_RADIUS = 16;
 
@@ -70,7 +68,6 @@ export function ChatSidebar({
   onClose,
   isDesktop,
   sidebarWidth,
-  navTopOffset = 0,
   onCreateChat,
   onSearch,
 }: ChatSidebarProps) {
@@ -103,13 +100,13 @@ export function ChatSidebar({
           style={[
             backdropStyle,
             {
-            position: 'absolute',
-            top: 0,
-            right: 0,
-            bottom: navTopOffset,
-            left: 0,
-            zIndex: 40,
-            backgroundColor: BACKDROP_COLOR,
+              position: 'absolute',
+              top: 0,
+              right: 0,
+              bottom: 0,
+              left: 0,
+              zIndex: 40,
+              backgroundColor: BACKDROP_COLOR,
             },
           ]}
         >
@@ -128,7 +125,7 @@ export function ChatSidebar({
           {
             position: 'absolute',
             top: 0,
-            bottom: navTopOffset + PANEL_BOTTOM_GAP,
+            bottom: 0,
             left: 0,
             zIndex: 50,
             width: sidebarWidth,
