@@ -5,19 +5,30 @@ import { useChatSidebar } from './ChatSidebar.hooks';
 import { ChatSidebar } from './ChatSidebar';
 import { ChatSidebarTrigger } from './ChatSidebarTrigger';
 
+type ChatSidebarLayerProps = {
+  /** Высота нижней навигации: слой заканчивается ровно над ней */
+  bottomOffset?: number;
+};
+
 /**
  * Слой сайдбара поверх контента страницы.
  * Должен монтироваться последним элементом в (tabs)/_layout.tsx —
  * изнутри экрана панели нельзя поднять выше таб-бара.
  */
-export function ChatSidebarLayer() {
+export function ChatSidebarLayer({ bottomOffset = 0 }: ChatSidebarLayerProps) {
   const insets = useSafeAreaInsets();
   const sidebar = useChatSidebar();
 
   return (
     <View
       pointerEvents="box-none"
-      style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }}
+      style={{
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        bottom: bottomOffset,
+        left: 0,
+      }}
     >
       <ChatSidebar
         isOpen={sidebar.isOpen}

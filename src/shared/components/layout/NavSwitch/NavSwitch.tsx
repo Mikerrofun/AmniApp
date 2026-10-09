@@ -8,7 +8,12 @@ import { SwitcherButtonText } from "@/shared/components/ui/SwitcherButton";
 
 import { navLinks } from "./NavSwitch.types";
 
-export default function NavSwitch({ state }: BottomTabBarProps) {
+type NavSwitchProps = BottomTabBarProps & {
+  /** Наверх: измеренная высота навигации (нужна слою сайдбара, чтобы не заходить на nav) */
+  onLayout?: (height: number) => void;
+};
+
+export default function NavSwitch({ state, onLayout }: NavSwitchProps) {
   const insets = useSafeAreaInsets();
 
   const currentRouteName = state.routes[state.index]?.name;
@@ -20,6 +25,7 @@ export default function NavSwitch({ state }: BottomTabBarProps) {
     <View
       style={{ paddingBottom: insets.bottom }}
       className="w-full rounded-[20px] border-t border-white/5 bg-card"
+      onLayout={(event) => onLayout?.(event.nativeEvent.layout.height)}
     >
       <SwitchGlobal
         equalWidth
