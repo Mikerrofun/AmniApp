@@ -18,7 +18,7 @@ export default function NavSwitch({ state }: BottomTabBarProps) {
 
   return (
     <View
-      style={{ paddingBottom: insets.bottom, marginBottom: 10 }}
+      style={{ paddingBottom: insets.bottom }}
       className="w-full rounded-[20px] border-t border-white/5 bg-card"
     >
       <SwitchGlobal
