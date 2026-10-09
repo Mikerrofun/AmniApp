@@ -16,7 +16,9 @@ const ANIMATION_DURATION = 260;
 /** Контент панели начинается ниже кнопки-триггера (12 + 30 + зазор) */
 const CONTENT_TOP_OFFSET = 56;
 /** Зазор между низом панели и верхом нижней навигации */
-const PANEL_BOTTOM_GAP = 10;
+const PANEL_BOTTOM_GAP = 5;
+/** Скругление нижних углов панели */
+const PANEL_BOTTOM_RADIUS = 16;
 
 /**
  * Критические стили панели заданы инлайн: className на Animated.View
@@ -134,6 +136,8 @@ export function ChatSidebar({
             backgroundColor: PANEL_BACKGROUND_COLOR,
             borderRightWidth: 1,
             borderRightColor: PANEL_BORDER_COLOR,
+            borderBottomLeftRadius: PANEL_BOTTOM_RADIUS,
+            borderBottomRightRadius: PANEL_BOTTOM_RADIUS,
           },
         ]}
       >
