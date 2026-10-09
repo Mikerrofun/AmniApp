@@ -12,6 +12,8 @@ export type ChatSidebarProps = {
   isDesktop: boolean;
   /** Ширина панели в открытом состоянии */
   sidebarWidth: number;
+  /** Расстояние от низа экрана до верха нижней навигации (панель не заходит на nav) */
+  navTopOffset?: number;
   /** Будущая логика: создание нового чата */
   onCreateChat?: () => void;
   /** Будущая логика: выбор чата из истории */
@@ -19,6 +21,11 @@ export type ChatSidebarProps = {
   /** Будущая логика: поиск по чатам */
   onSearch?: (query: string) => void;
   className?: string;
+};
+
+export type ChatSidebarLayerProps = {
+  /** Измеренная высота нижней навигации (без учёта её marginBottom) */
+  navHeight: number;
 };
 
 export type ChatSidebarTriggerProps = {
