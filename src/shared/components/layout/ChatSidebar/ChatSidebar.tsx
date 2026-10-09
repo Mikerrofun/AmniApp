@@ -16,26 +16,13 @@ import type { ChatSidebarProps } from './ChatSidebar.types';
 
 const ANIMATION_DURATION = 260;
 
-type SidebarContentProps = Pick<ChatSidebarProps, 'onClose' | 'onCreateChat' | 'onSearch'>;
+type SidebarContentProps = Pick<ChatSidebarProps, 'onCreateChat' | 'onSearch'>;
 
-function SidebarContent({ onClose, onCreateChat, onSearch }: SidebarContentProps) {
+function SidebarContent({ onCreateChat, onSearch }: SidebarContentProps) {
   return (
-    <View className="flex-1 px-3 pt-3">
-      <View className="flex-row items-center justify-between">
-        <Text className="text-base font-semibold text-text-primary">Чаты</Text>
-        <Pressable
-          onPress={onClose}
-          accessibilityRole="button"
-          accessibilityLabel="Закрыть панель чатов"
-          hitSlop={8}
-          className="h-8 w-8 items-center justify-center rounded-lg active:bg-white/10"
-        >
-          <View className="h-[14px] w-[14px]">
-            <View className="absolute h-[1.5px] w-full translate-y-[6px] rotate-45 rounded-full bg-text-muted" />
-            <View className="absolute h-[1.5px] w-full translate-y-[6px] -rotate-45 rounded-full bg-text-muted" />
-          </View>
-        </Pressable>
-      </View>
+    <View className="flex-1 px-3 pb-3">
+      {/* Заголовок сдвинут вправо, чтобы не перекрываться с кнопкой-триггером */}
+      <Text className="pl-12 pt-3 text-base font-semibold text-text-primary">Чаты</Text>
 
       {/* Задел под будущий поиск по чатам */}
       <TextInput
@@ -55,7 +42,7 @@ function SidebarContent({ onClose, onCreateChat, onSearch }: SidebarContentProps
         onPress={onCreateChat}
         accessibilityRole="button"
         accessibilityLabel="Создать новый чат"
-        className="mb-3 h-10 items-center justify-center rounded-xl bg-accent active:bg-accent-soft"
+        className="mt-3 h-10 items-center justify-center rounded-xl bg-accent active:bg-accent-soft"
       >
         <Text className="text-sm font-medium text-white">Новый чат</Text>
       </Pressable>
@@ -63,13 +50,16 @@ function SidebarContent({ onClose, onCreateChat, onSearch }: SidebarContentProps
   );
 }
 
+/**
+ * Панель чатов. Всегда открывается поверх контента (на всех платформах),
+ * контент страницы никогда не сдвигается.
+ */
 export function ChatSidebar({
   isOpen,
   onClose,
   isDesktop,
   sidebarWidth,
   onCreateChat,
-  onSelectChat,
   onSearch,
   className,
 }: ChatSidebarProps) {
@@ -83,11 +73,7 @@ export function ChatSidebar({
     });
   }, [isOpen, progress]);
 
-  const desktopStyle = useAnimatedStyle(() => ({
-    width: interpolate(progress.value, [0, 1], [0, sidebarWidth], Extrapolation.CLAMP),
-  }));
-
-  const overlayStyle = useAnimatedStyle(() => ({
+  const panelStyle = useAnimatedStyle(() => ({
     transform: [
       { translateX: interpolate(progress.value, [0, 1], [-sidebarWidth, 0], Extrapolation.CLAMP) },
     ],
@@ -97,43 +83,32 @@ export function ChatSidebar({
     opacity: progress.value,
   }));
 
-  // Десктоп/веб: панель встроена в layout и сжимается по ширине
-  if (isDesktop) {
-    return (
-      <Animated.View
-        style={desktopStyle}
-        className={cn('h-full overflow-hidden border-r border-white/5 bg-card', className)}
-      >
-        <View style={{ width: sidebarWidth }} className="flex-1">
-          <SidebarContent onClose={onClose} onCreateChat={onCreateChat} onSearch={onSearch} />
-        </View>
-      </Animated.View>
-    );
-  }
-
-  // Телефон: панель выезжает поверх контента, тап по затемнению закрывает
   return (
     <>
+      {/* Затемнение только на телефоне: тап по фону закрывает панель */}
+      {!isDesktop && (
+        <Animated.View
+          pointerEvents={isOpen ? 'auto' : 'none'}
+          style={backdropStyle}
+          className="absolute inset-0 z-40 bg-black/50"
+        >
+          <Pressable
+            className="flex-1"
+            onPress={onClose}
+            accessibilityLabel="Закрыть панель чатов"
+          />
+        </Animated.View>
+      )}
+
       <Animated.View
         pointerEvents={isOpen ? 'auto' : 'none'}
-        style={backdropStyle}
-        className="absolute inset-0 z-40 bg-black/50"
-      >
-        <Pressable
-          className="flex-1"
-          onPress={onClose}
-          accessibilityLabel="Закрыть панель чатов"
-        />
-      </Animated.View>
-      <Animated.View
-        pointerEvents={isOpen ? 'auto' : 'none'}
-        style={[overlayStyle, { width: sidebarWidth, paddingTop: insets.top }]}
+        style={[panelStyle, { width: sidebarWidth, paddingTop: insets.top }]}
         className={cn(
           'absolute bottom-0 left-0 top-0 z-50 border-r border-white/5 bg-card',
           className,
         )}
       >
-        <SidebarContent onClose={onClose} onCreateChat={onCreateChat} onSearch={onSearch} />
+        <SidebarContent onCreateChat={onCreateChat} onSearch={onSearch} />
       </Animated.View>
     </>
   );

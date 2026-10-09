@@ -8,7 +8,7 @@ export type ChatSummary = {
 export type ChatSidebarProps = {
   isOpen: boolean;
   onClose: () => void;
-  /** true — панель встроена в layout (десктоп/веб); false — оверлей поверх контента (телефон) */
+  /** true — десктоп/веб (без затемнения фона); false — телефон (с затемнением) */
   isDesktop: boolean;
   /** Ширина панели в открытом состоянии */
   sidebarWidth: number;
@@ -22,6 +22,8 @@ export type ChatSidebarProps = {
 };
 
 export type ChatSidebarTriggerProps = {
+  /** Панель открыта — кнопка отображается как крестик для закрытия */
+  isOpen: boolean;
   onPress: () => void;
   className?: string;
 };
