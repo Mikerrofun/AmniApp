@@ -3,9 +3,9 @@ import { useWindowDimensions } from 'react-native';
 
 /** Начиная с этой ширины экрана панель считается десктопной и открыта по умолчанию */
 export const SIDEBAR_DESKTOP_BREAKPOINT = 900;
-/** Доля ширины экрана, которую панель занимает на телефоне (30–35%) */
-export const SIDEBAR_MOBILE_RATIO = 0.32;
-export const SIDEBAR_MOBILE_MIN_WIDTH = 150;
+/** Доля ширины экрана, которую панель занимает на телефоне */
+export const SIDEBAR_MOBILE_RATIO = 0.7;
+export const SIDEBAR_MOBILE_MIN_WIDTH = 240;
 export const SIDEBAR_DESKTOP_WIDTH = 280;
 
 export type ChatSidebarController = {

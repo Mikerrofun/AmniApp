@@ -10,19 +10,26 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { cn } from '@/shared/lib/cn';
-
 import type { ChatSidebarProps } from './ChatSidebar.types';
 
 const ANIMATION_DURATION = 260;
+/** Контент панели начинается ниже кнопки-триггера (12 + 30 + зазор) */
+const CONTENT_TOP_OFFSET = 56;
+
+/**
+ * Критические стили панели заданы инлайн: className на Animated.View
+ * (Reanimated) может не применяться, из-за чего панель теряет фон и позицию.
+ */
+const PANEL_BACKGROUND_COLOR = '#0E0E10';
+const PANEL_BORDER_COLOR = 'rgba(255, 255, 255, 0.15)';
+const BACKDROP_COLOR = 'rgba(0, 0, 0, 0.5)';
 
 type SidebarContentProps = Pick<ChatSidebarProps, 'onCreateChat' | 'onSearch'>;
 
 function SidebarContent({ onCreateChat, onSearch }: SidebarContentProps) {
   return (
-    <View className="flex-1 px-3 pb-3">
-      {/* Заголовок сдвинут вправо, чтобы не перекрываться с кнопкой-триггером */}
-      <Text className="pl-12 pt-3 text-base font-semibold text-text-primary">Чаты</Text>
+    <View className="flex-1 px-3 pb-3" style={{ paddingTop: CONTENT_TOP_OFFSET }}>
+      <Text className="text-base font-semibold text-text-primary">Чаты</Text>
 
       {/* Задел под будущий поиск по чатам */}
       <TextInput
@@ -32,7 +39,7 @@ function SidebarContent({ onCreateChat, onSearch }: SidebarContentProps) {
         className="mt-3 h-9 rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-text-primary"
       />
 
-      {/* Задел под будущий список чатов — контент прижат к верху */}
+      {/* Задел под будущий список чатов */}
       <View className="mt-3">
         <Text className="text-sm text-text-muted">Здесь появится список чатов</Text>
       </View>
@@ -61,7 +68,6 @@ export function ChatSidebar({
   sidebarWidth,
   onCreateChat,
   onSearch,
-  className,
 }: ChatSidebarProps) {
   const insets = useSafeAreaInsets();
   const progress = useSharedValue(isOpen ? 1 : 0);
@@ -89,11 +95,21 @@ export function ChatSidebar({
       {!isDesktop && (
         <Animated.View
           pointerEvents={isOpen ? 'auto' : 'none'}
-          style={backdropStyle}
-          className="absolute inset-0 z-40 bg-black/50"
+          style={[
+            backdropStyle,
+            {
+              position: 'absolute',
+              top: 0,
+              right: 0,
+              bottom: 0,
+              left: 0,
+              zIndex: 40,
+              backgroundColor: BACKDROP_COLOR,
+            },
+          ]}
         >
           <Pressable
-            className="flex-1"
+            style={{ flex: 1 }}
             onPress={onClose}
             accessibilityLabel="Закрыть панель чатов"
           />
@@ -102,11 +118,21 @@ export function ChatSidebar({
 
       <Animated.View
         pointerEvents={isOpen ? 'auto' : 'none'}
-        style={[panelStyle, { width: sidebarWidth, paddingTop: insets.top }]}
-        className={cn(
-          'absolute bottom-0 left-0 top-0 z-50 border-r border-white/15 bg-[#0E0E10]',
-          className,
-        )}
+        style={[
+          panelStyle,
+          {
+            position: 'absolute',
+            top: 0,
+            bottom: 0,
+            left: 0,
+            zIndex: 50,
+            width: sidebarWidth,
+            paddingTop: insets.top,
+            backgroundColor: PANEL_BACKGROUND_COLOR,
+            borderRightWidth: 1,
+            borderRightColor: PANEL_BORDER_COLOR,
+          },
+        ]}
       >
         <SidebarContent onCreateChat={onCreateChat} onSearch={onSearch} />
       </Animated.View>
