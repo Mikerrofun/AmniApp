@@ -32,8 +32,8 @@ function SidebarContent({ onCreateChat, onSearch }: SidebarContentProps) {
         className="mt-3 h-9 rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-text-primary"
       />
 
-      {/* Задел под будущий список чатов */}
-      <View className="mt-3 flex-1 items-center justify-center">
+      {/* Задел под будущий список чатов — контент прижат к верху */}
+      <View className="mt-3">
         <Text className="text-sm text-text-muted">Здесь появится список чатов</Text>
       </View>
 
@@ -104,7 +104,7 @@ export function ChatSidebar({
         pointerEvents={isOpen ? 'auto' : 'none'}
         style={[panelStyle, { width: sidebarWidth, paddingTop: insets.top }]}
         className={cn(
-          'absolute bottom-0 left-0 top-0 z-50 border-r border-white/5 bg-card',
+          'absolute bottom-0 left-0 top-0 z-50 border-r border-white/15 bg-[#0E0E10]',
           className,
         )}
       >
