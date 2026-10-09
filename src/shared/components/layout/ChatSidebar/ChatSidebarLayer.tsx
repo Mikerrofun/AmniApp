@@ -1,0 +1,43 @@
+import { View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { useChatSidebar } from './ChatSidebar.hooks';
+import { ChatSidebar } from './ChatSidebar';
+import { ChatSidebarTrigger } from './ChatSidebarTrigger';
+
+/**
+ * Слой сайдбара поверх всего экрана, включая нижнюю навигацию.
+ * Должен монтироваться последним элементом в (tabs)/_layout.tsx —
+ * изнутри экрана панели нельзя подняться выше таб-бара.
+ */
+export function ChatSidebarLayer() {
+  const insets = useSafeAreaInsets();
+  const sidebar = useChatSidebar();
+
+  return (
+    <View
+      pointerEvents="box-none"
+      style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }}
+    >
+      <ChatSidebar
+        isOpen={sidebar.isOpen}
+        onClose={sidebar.close}
+        isDesktop={sidebar.isDesktop}
+        sidebarWidth={sidebar.sidebarWidth}
+      />
+
+      {/* Единая кнопка поверх панели: квадрат открывает и закрывает */}
+      <View
+        pointerEvents="box-none"
+        style={{
+          position: 'absolute',
+          left: 16,
+          top: insets.top + 12,
+          zIndex: 60,
+        }}
+      >
+        <ChatSidebarTrigger isOpen={sidebar.isOpen} onPress={sidebar.toggle} />
+      </View>
+    </View>
+  );
+}

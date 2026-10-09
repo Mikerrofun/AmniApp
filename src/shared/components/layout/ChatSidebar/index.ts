@@ -1,5 +1,6 @@
 export { ChatSidebar } from './ChatSidebar';
 export { ChatSidebarTrigger } from './ChatSidebarTrigger';
+export { ChatSidebarLayer } from './ChatSidebarLayer';
 export {
   useChatSidebar,
   SIDEBAR_DESKTOP_BREAKPOINT,
