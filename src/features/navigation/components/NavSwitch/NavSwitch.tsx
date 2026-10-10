@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { SwitchGlobal } from "@/shared/components/ui/SwitchGlobal";
 import { SwitcherButtonText } from "@/shared/components/ui/SwitcherButton";
 
-import { navLinks } from "./NavSwitch.types";
+import { navLinks } from "./NavSwitch.config";
 
 export default function NavSwitch({ state }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
@@ -18,7 +18,7 @@ export default function NavSwitch({ state }: BottomTabBarProps) {
 
   return (
     <View
-      style={{ paddingBottom: insets.bottom, marginBottom: 10 }}
+      style={{ paddingBottom: insets.bottom }}
       className="w-full rounded-[20px] border-t border-white/5 bg-card"
     >
       <SwitchGlobal
