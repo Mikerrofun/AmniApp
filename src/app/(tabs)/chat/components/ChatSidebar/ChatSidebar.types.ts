@@ -21,13 +21,6 @@ export type ChatSidebarProps = {
   isDesktop: boolean;
   /** Ширина панели в открытом состоянии */
   sidebarWidth: number;
-  /** Будущая логика: создание нового чата */
-  onCreateChat?: () => void;
-  /** Будущая логика: выбор чата из истории */
-  onSelectChat?: (chatId: string) => void;
-  /** Будущая логика: поиск по чатам */
-  onSearch?: (query: string) => void;
-  className?: string;
 };
 
 export type ChatSidebarTriggerProps = {
@@ -36,9 +29,3 @@ export type ChatSidebarTriggerProps = {
   onPress: () => void;
   className?: string;
 };
-
-/** Пропсы для внутреннего компонента SidebarContent */
-export type SidebarContentProps = Pick<
-  ChatSidebarProps,
-  "onCreateChat" | "onSearch"
->;

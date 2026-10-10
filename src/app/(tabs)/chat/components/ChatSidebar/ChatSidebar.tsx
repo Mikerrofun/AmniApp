@@ -17,12 +17,14 @@ import {
   CONTENT_TOP_OFFSET,
   PANEL_BOTTOM_RADIUS,
 } from "./ChatSidebar.config";
-import type {
-  ChatSidebarProps,
-  SidebarContentProps,
-} from "./ChatSidebar.types";
+import type { ChatSidebarProps } from "./ChatSidebar.types";
 
-function SidebarContent({ onCreateChat, onSearch }: SidebarContentProps) {
+function SidebarContent() {
+  // TODO: Здесь будут хуки для работы с чатами:
+  // - useChats() для получения списка чатов
+  // - useCreateChat() для создания нового чата
+  // - useChatSearch() для поиска по чатам
+
   return (
     <View
       className="flex-1 px-3 pb-3"
@@ -33,7 +35,6 @@ function SidebarContent({ onCreateChat, onSearch }: SidebarContentProps) {
       <TextInput
         placeholder="Поиск по чатам"
         placeholderTextColor={colors.placeholder}
-        onChangeText={onSearch}
         className="mt-3 h-9 rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-text-primary"
       />
 
@@ -44,7 +45,6 @@ function SidebarContent({ onCreateChat, onSearch }: SidebarContentProps) {
       </View>
 
       <Pressable
-        onPress={onCreateChat}
         accessibilityRole="button"
         accessibilityLabel="Создать новый чат"
         className="mt-3 h-10 items-center justify-center rounded-xl bg-accent active:bg-accent-soft"
@@ -64,8 +64,6 @@ export function ChatSidebar({
   onClose,
   isDesktop,
   sidebarWidth,
-  onCreateChat,
-  onSearch,
 }: ChatSidebarProps) {
   const insets = useSafeAreaInsets();
   const progress = useSharedValue(isOpen ? 1 : 0);
@@ -141,7 +139,7 @@ export function ChatSidebar({
           },
         ]}
       >
-        <SidebarContent onCreateChat={onCreateChat} onSearch={onSearch} />
+        <SidebarContent />
       </Animated.View>
     </>
   );
