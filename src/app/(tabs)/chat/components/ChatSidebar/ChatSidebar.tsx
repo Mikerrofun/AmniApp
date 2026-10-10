@@ -10,23 +10,17 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import type { ChatSidebarProps } from "./ChatSidebar.types";
+import { colors } from "@/shared/config/colors";
 
-const ANIMATION_DURATION = 260;
-/** Контент панели начинается ниже кнопки-триггера (12 + 30 + зазор) */
-const CONTENT_TOP_OFFSET = 56;
-/** Скругление нижних углов панели */
-const PANEL_BOTTOM_RADIUS = 16;
-
-/**
- * Критические стили панели заданы инлайн: className на Animated.View
- * (Reanimated) может не применяться, из-за чего панель теряет фон и позицию.
- */
-const PANEL_BACKGROUND_COLOR = "#0E0E10";
-const PANEL_BORDER_COLOR = "rgba(255, 255, 255, 0.15)";
-const BACKDROP_COLOR = "rgba(0, 0, 0, 0.5)";
-
-type SidebarContentProps = Pick<ChatSidebarProps, "onCreateChat" | "onSearch">;
+import {
+  ANIMATION_DURATION,
+  CONTENT_TOP_OFFSET,
+  PANEL_BOTTOM_RADIUS,
+} from "./ChatSidebar.config";
+import type {
+  ChatSidebarProps,
+  SidebarContentProps,
+} from "./ChatSidebar.types";
 
 function SidebarContent({ onCreateChat, onSearch }: SidebarContentProps) {
   return (
@@ -36,22 +30,19 @@ function SidebarContent({ onCreateChat, onSearch }: SidebarContentProps) {
     >
       <Text className="text-base font-semibold text-text-primary">Чаты</Text>
 
-      {/* Задел под будущий поиск по чатам */}
       <TextInput
         placeholder="Поиск по чатам"
-        placeholderTextColor="#8A8A90"
+        placeholderTextColor={colors.placeholder}
         onChangeText={onSearch}
         className="mt-3 h-9 rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-text-primary"
       />
 
-      {/* Задел под будущий список чатов */}
       <View className="mt-3">
         <Text className="text-sm text-text-muted">
           Здесь появится список чатов
         </Text>
       </View>
 
-      {/* Задел под будущее создание чатов */}
       <Pressable
         onPress={onCreateChat}
         accessibilityRole="button"
@@ -118,7 +109,7 @@ export function ChatSidebar({
               bottom: 0,
               left: 0,
               zIndex: 40,
-              backgroundColor: BACKDROP_COLOR,
+              backgroundColor: colors.backdrop,
             },
           ]}
         >
@@ -142,9 +133,9 @@ export function ChatSidebar({
             zIndex: 50,
             width: sidebarWidth,
             paddingTop: insets.top,
-            backgroundColor: PANEL_BACKGROUND_COLOR,
+            backgroundColor: colors.panelBackground,
             borderRightWidth: 1,
-            borderRightColor: PANEL_BORDER_COLOR,
+            borderRightColor: colors.panelBorder,
             borderBottomLeftRadius: PANEL_BOTTOM_RADIUS,
             borderBottomRightRadius: PANEL_BOTTOM_RADIUS,
           },

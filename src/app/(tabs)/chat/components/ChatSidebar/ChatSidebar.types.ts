@@ -27,3 +27,9 @@ export type ChatSidebarTriggerProps = {
   onPress: () => void;
   className?: string;
 };
+
+/** Пропсы для внутреннего компонента SidebarContent */
+export type SidebarContentProps = Pick<
+  ChatSidebarProps,
+  "onCreateChat" | "onSearch"
+>;
