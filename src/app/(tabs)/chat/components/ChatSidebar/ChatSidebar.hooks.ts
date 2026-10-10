@@ -8,14 +8,7 @@ import {
   SIDEBAR_MOBILE_RATIO,
 } from "./ChatSidebar.config";
 
-export type ChatSidebarController = {
-  isOpen: boolean;
-  isDesktop: boolean;
-  sidebarWidth: number;
-  open: () => void;
-  close: () => void;
-  toggle: () => void;
-};
+import { ChatSidebarController } from "../ChatSidebar/ChatSidebar.types";
 
 export function useChatSidebar(): ChatSidebarController {
   const { width } = useWindowDimensions();

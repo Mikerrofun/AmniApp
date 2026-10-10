@@ -5,6 +5,15 @@ export type ChatSummary = {
   updatedAt: number;
 };
 
+export type ChatSidebarController = {
+  isOpen: boolean;
+  isDesktop: boolean;
+  sidebarWidth: number;
+  open: () => void;
+  close: () => void;
+  toggle: () => void;
+};
+
 export type ChatSidebarProps = {
   isOpen: boolean;
   onClose: () => void;
