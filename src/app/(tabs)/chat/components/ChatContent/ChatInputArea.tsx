@@ -27,7 +27,7 @@ export function ChatInputArea({ chatId }: ChatInputAreaProps) {
   const focusChatId = useChatsStore((state) => state.focusChatId);
   const consumeFocusChat = useChatsStore((state) => state.consumeFocusChat);
 
-  const scroll = useScrollIndicator();
+  const scroll = useScrollIndicator({ verticalPadding: 4 });
 
   // Фокус после создания чата (флаг снимается, чтобы не фокусить
   // при обычном переключении чатов)
@@ -40,21 +40,30 @@ export function ChatInputArea({ chatId }: ChatInputAreaProps) {
 
   return (
     <View className="px-3 pb-3">
-      <View className="flex-row items-center gap-2 rounded-[20px] border border-white/10 bg-white/5 p-2">
+      <View className="flex-row items-center gap-2 rounded-3xl border border-white/10 bg-white/5 p-2">
         <View className="relative min-w-0 flex-1">
           <TextInput
             ref={inputRef}
             value={draft}
             onChangeText={handleChange}
             multiline
+            scrollEnabled
             textAlignVertical="center"
             placeholder={t("chatInput.placeholder")}
             placeholderTextColor={colors.placeholder}
             onScroll={scroll.onScroll}
             onContentSizeChange={scroll.onContentSizeChange}
             onLayout={scroll.onLayout}
-            style={{ paddingTop: 8, paddingBottom: 8 }}
-            className="max-h-32 min-h-[36px] w-full px-2 text-sm text-text-primary"
+            scrollEventThrottle={16}
+            style={{
+              paddingTop: 8,
+              paddingBottom: 8,
+              paddingLeft: 12,
+              paddingRight: 8,
+              maxHeight: 128,
+              minHeight: 36,
+            }}
+            className="w-full text-sm text-text-primary"
           />
           {/* Индикатор прокрутки слева: видно, сколько текста скрыто */}
           <ScrollIndicator
@@ -65,7 +74,7 @@ export function ChatInputArea({ chatId }: ChatInputAreaProps) {
             inset={1}
           />
         </View>
-        <View className="h-9 w-9 items-center justify-center rounded-[20px] bg-white/5">
+        <View className="h-9 w-9 items-center justify-center rounded-3xl bg-white/5">
           <Pressable
             disabled
             accessibilityRole="button"

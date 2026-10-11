@@ -49,7 +49,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
   // Поиск неактивен в этой итерации — только UI
   const [searchQuery, setSearchQuery] = useState("");
 
-  const scroll = useScrollIndicator();
+  const scroll = useScrollIndicator({ verticalPadding: 8 });
 
   const sections = useMemo(
     () => groupChatsByDay(chats, sortDirection, locale, t("chats.pinned")),
@@ -160,7 +160,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
           thumbHeight={scroll.thumbHeight}
           thumbTop={scroll.thumbTop}
           side="right"
-          inset={0}
+          inset={-6}
         />
       </View>
     </View>

@@ -1,15 +1,10 @@
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Text,
-  View,
-} from "react-native";
+import { KeyboardAvoidingView, Platform, Text, View } from "react-native";
 
 import { useChatsStore } from "@/features/chats";
 import { useT } from "@/shared/i18n";
 
-import { ChatInputArea } from "./ChatInputArea";
 import type { ChatContentProps } from "./ChatContent.types";
+import { ChatInputArea } from "./ChatInputArea";
 
 /**
  * Контент страницы чата. Поле ввода видно всегда — даже когда чатов
