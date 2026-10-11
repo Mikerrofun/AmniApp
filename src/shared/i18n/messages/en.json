@@ -1,0 +1,35 @@
+{
+  "common": {
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete"
+  },
+  "chats": {
+    "title": "Chats",
+    "searchPlaceholder": "Search chats",
+    "newChat": "New chat",
+    "newChatDefaultTitle": "New chat",
+    "empty": "No chats yet",
+    "pinned": "Pinned",
+    "openPanel": "Open chats panel",
+    "closePanel": "Close chats panel",
+    "sortNewestFirst": "Newest first",
+    "sortOldestFirst": "Oldest first",
+    "selectChat": "Select chat {title}",
+    "chatActions": "Actions for chat {title}",
+    "renameChat": "Chat name"
+  },
+  "popover": {
+    "rename": "Rename",
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "delete": "Delete",
+    "deleteConfirm": "Delete chat \"{title}\"? This action cannot be undone."
+  },
+  "chatInput": {
+    "emptyTitle": "Chat",
+    "subtitle": "Talk to your assistant",
+    "placeholder": "Message...",
+    "send": "Send"
+  }
+}

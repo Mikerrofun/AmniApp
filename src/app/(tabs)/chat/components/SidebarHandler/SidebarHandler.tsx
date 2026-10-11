@@ -1,7 +1,8 @@
-import { View } from "react-native";
+import { Text, View } from "react-native";
 
-import { ChatSidebar } from "../ChatSidebar";
-import { ChatSidebarTrigger } from "../ChatSidebar";
+import { useT } from "@/shared/i18n";
+
+import { ChatSidebar, ChatSidebarTrigger } from "../ChatSidebar";
 
 import type { SidebarHandlerProps } from "./SidebarHandler.types";
 
@@ -17,6 +18,8 @@ export function SidebarHandler({
   sidebarWidth,
   topInset,
 }: SidebarHandlerProps) {
+  const t = useT();
+
   return (
     <View
       pointerEvents="box-none"
@@ -47,6 +50,27 @@ export function SidebarHandler({
       >
         <ChatSidebarTrigger isOpen={isOpen} onPress={onToggle} />
       </View>
+
+      {/* Заголовок "Chats" - показывается только когда sidebar открыт */}
+      {isOpen && (
+        <View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            left: 0,
+            width: sidebarWidth,
+            top: topInset + 12,
+            height: 30,
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 55,
+          }}
+        >
+          <Text className="text-base font-semibold text-text-primary">
+            {t("chats.title")}
+          </Text>
+        </View>
+      )}
     </View>
   );
 }

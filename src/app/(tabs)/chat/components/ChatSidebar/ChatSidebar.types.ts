@@ -2,6 +2,7 @@
 export type ChatSummary = {
   id: string;
   title: string;
+  isPinned: boolean;
   updatedAt: number;
 };
 

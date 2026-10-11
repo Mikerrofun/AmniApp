@@ -1,6 +1,7 @@
 import { Pressable } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
+import { useT } from '@/shared/i18n';
 
 import type { ChatSidebarTriggerProps } from './ChatSidebar.types';
 
@@ -12,11 +13,13 @@ const TRIGGER_SIZE = 30;
  * Один и тот же квадратик открывает и закрывает панель.
  */
 export function ChatSidebarTrigger({ isOpen, onPress, className }: ChatSidebarTriggerProps) {
+  const t = useT();
+
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={isOpen ? 'Закрыть панель чатов' : 'Открыть панель чатов'}
+      accessibilityLabel={isOpen ? t('chats.closePanel') : t('chats.openPanel')}
       hitSlop={6}
       style={{ width: TRIGGER_SIZE, height: TRIGGER_SIZE }}
       className={cn(
