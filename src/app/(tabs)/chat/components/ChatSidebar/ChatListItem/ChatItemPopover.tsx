@@ -7,15 +7,11 @@ import { colors } from "@/shared/config/colors";
 import { useT } from "@/shared/i18n";
 import { cn } from "@/shared/lib/cn";
 
-import type { ChatItemPopoverProps } from "./ChatItemPopover.types";
+import type {
+  ChatItemPopoverProps,
+  MenuItemProps,
+} from "./ChatItemPopover.types";
 import { CHAT_POPOVER_WIDTH } from "./ChatListItem.config";
-
-type MenuItemProps = {
-  icon: typeof Pin;
-  label: string;
-  danger?: boolean;
-  onPress: () => void;
-};
 
 function MenuItem({
   icon: Icon,
@@ -40,10 +36,6 @@ function MenuItem({
   );
 }
 
-/**
- * Содержимое popover'а чата — три состояния внутри одного popover'а:
- * menu (действия), rename (переименование), delete (подтверждение удаления).
- */
 export function ChatItemPopover({
   chat,
   mode,
@@ -58,7 +50,6 @@ export function ChatItemPopover({
   const t = useT();
   const [renameText, setRenameText] = useState(chat.title);
 
-  /** Закрытие со сбросом режима в menu */
   const close = () => {
     onModeChange("menu");
     onClose();
@@ -85,7 +76,6 @@ export function ChatItemPopover({
             icon={Pencil}
             label={t("popover.rename")}
             onPress={() => {
-              // Подставляем текущее название при входе в режим переименования
               setRenameText(chat.title);
               onModeChange("rename");
             }}

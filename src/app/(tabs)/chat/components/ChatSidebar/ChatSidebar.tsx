@@ -69,15 +69,11 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
       className="flex-1 px-3 pb-3"
       style={{ paddingTop: CONTENT_TOP_OFFSET }}
     >
-      <Text className="text-base font-semibold text-text-primary">
-        {t("chats.title")}
-      </Text>
-
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={t("chats.newChat")}
         onPress={handleCreateChat}
-        className="mt-3 h-10 flex-row items-center justify-center gap-2 rounded-xl bg-accent active:bg-accent-soft"
+        className="h-10 flex-row items-center justify-center gap-2 rounded-xl bg-accent active:bg-accent-soft"
       >
         <Plus size={16} color="#FFFFFF" />
         <Text className="text-sm font-medium text-white">

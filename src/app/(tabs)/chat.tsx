@@ -11,10 +11,7 @@ export default function ChatScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      {/* Контент страницы */}
       <ChatContent topInset={insets.top} />
-
-      {/* Sidebar поверх контента */}
       <SidebarHandler
         isOpen={sidebar.isOpen}
         onClose={sidebar.close}

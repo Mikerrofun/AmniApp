@@ -1,24 +1,18 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { ChatRecord } from '@/types/chat';
+import type { ChatRecord } from "@/types/chat";
 
-import { useChatsStore } from './chats-store';
+import { useChatsStore } from "./chats-store";
 
 const DRAFT_SAVE_DEBOUNCE_MS = 300;
 
-/**
- * Черновик активного чата.
- * Локальный стейт для ввода, запись в БД дебаунсом (~300мс) и по onBlur.
- * Компонент монтируется с key={chat.id}, поэтому смена чата
- * пересоздает его с черновиком этого чата.
- */
 export function useChatDraft(chat: ChatRecord) {
   const updateDraft = useChatsStore((state) => state.updateDraft);
 
-  const [draft, setDraft] = useState(chat.draft ?? '');
+  const [draft, setDraft] = useState(chat.draft ?? "");
 
   // Зеркало черновика для чтения вне рендера (flush по onBlur/unmount)
-  const draftRef = useRef(chat.draft ?? '');
+  const draftRef = useRef(chat.draft ?? "");
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 

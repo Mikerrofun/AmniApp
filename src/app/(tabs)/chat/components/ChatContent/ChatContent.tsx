@@ -3,8 +3,8 @@ import { Text, View } from "react-native";
 import { useChatsStore } from "@/features/chats";
 import { useT } from "@/shared/i18n";
 
-import { ChatInputArea } from "./ChatInputArea";
 import type { ChatContentProps } from "./ChatContent.types";
+import { ChatInputArea } from "./ChatInputArea";
 
 export function ChatContent({ topInset }: ChatContentProps) {
   const t = useT();
@@ -27,15 +27,17 @@ export function ChatContent({ topInset }: ChatContentProps) {
 
   return (
     <View className="flex-1" style={{ paddingTop: topInset }}>
-      <Text
-        numberOfLines={1}
-        className="px-4 pt-3 text-center text-base font-semibold text-text-primary"
-      >
-        {activeChat.title}
-      </Text>
+      <View className="flex-row items-center px-4" style={{ height: 54 }}>
+        <View style={{ width: 54 }} />
+        <Text
+          numberOfLines={1}
+          className="flex-1 text-center text-base font-semibold text-text-primary"
+        >
+          {activeChat.title}
+        </Text>
+        <View style={{ width: 54 }} />
+      </View>
 
-      {/* key = id чата: при переключении чата компонент пересоздается
-          с черновиком этого чата */}
       <ChatInputArea key={activeChat.id} chat={activeChat} />
     </View>
   );
