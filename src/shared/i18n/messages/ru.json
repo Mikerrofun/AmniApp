@@ -1,0 +1,35 @@
+{
+  "common": {
+    "cancel": "Отмена",
+    "save": "Сохранить",
+    "delete": "Удалить"
+  },
+  "chats": {
+    "title": "Чаты",
+    "searchPlaceholder": "Поиск по чатам",
+    "newChat": "Новый чат",
+    "newChatDefaultTitle": "Новый чат",
+    "empty": "Здесь пока нет чатов",
+    "pinned": "Закрепленные",
+    "openPanel": "Открыть панель чатов",
+    "closePanel": "Закрыть панель чатов",
+    "sortNewestFirst": "Сначала новые",
+    "sortOldestFirst": "Сначала старые",
+    "selectChat": "Выбрать чат {title}",
+    "chatActions": "Действия с чатом {title}",
+    "renameChat": "Название чата"
+  },
+  "popover": {
+    "rename": "Переименовать",
+    "pin": "Закрепить",
+    "unpin": "Открепить",
+    "delete": "Удалить",
+    "deleteConfirm": "Удалить чат «{title}»? Это действие нельзя отменить."
+  },
+  "chatInput": {
+    "emptyTitle": "Чат",
+    "subtitle": "Общение с ассистентом",
+    "placeholder": "Сообщение...",
+    "send": "Отправить"
+  }
+}

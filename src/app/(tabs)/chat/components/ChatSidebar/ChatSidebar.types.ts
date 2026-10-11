@@ -2,6 +2,8 @@
 export type ChatSummary = {
   id: string;
   title: string;
+  isPinned: boolean;
+  draft: string | null;
   updatedAt: number;
 };
 
