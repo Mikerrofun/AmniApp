@@ -1,6 +1,6 @@
+import { ArrowDown, ArrowUp, Plus } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, SectionList, Text, TextInput, View } from "react-native";
-import { ArrowDown, ArrowUp, Plus } from "lucide-react-native";
 import Animated, {
   Easing,
   Extrapolation,
@@ -12,22 +12,22 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
+  groupChatsByDay,
   useChatActions,
   useChats,
   useChatsStore,
   useCreateChat,
-  groupChatsByDay,
 } from "@/features/chats";
 import { colors } from "@/shared/config/colors";
 import { useLocaleContext, useT } from "@/shared/i18n";
 
+import { ChatListItem } from "./ChatListItem";
+import { ChatListSection } from "./ChatListSection";
 import {
   ANIMATION_DURATION,
   CONTENT_TOP_OFFSET,
   PANEL_BOTTOM_RADIUS,
 } from "./ChatSidebar.config";
-import { ChatListItem } from "./ChatListItem";
-import { ChatListSection } from "./ChatListSection";
 import type { ChatSidebarProps } from "./ChatSidebar.types";
 
 function SidebarContent({ onClose }: { onClose?: () => void }) {
@@ -91,7 +91,11 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
           onChangeText={setSearchQuery}
           placeholder={t("chats.searchPlaceholder")}
           placeholderTextColor={colors.placeholder}
-          className="h-9 flex-1 rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-text-primary"
+          scrollEnabled={false}
+          multiline={false}
+          textAlignVertical="center"
+          style={{ height: 36, paddingVertical: 0 }}
+          className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-text-primary"
         />
         <Pressable
           accessibilityRole="button"

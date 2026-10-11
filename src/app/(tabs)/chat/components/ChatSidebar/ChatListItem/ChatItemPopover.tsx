@@ -1,14 +1,14 @@
-import { useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
-import { Pencil, Pin, PinOff, Trash2 } from 'lucide-react-native';
+import { Pencil, Pin, PinOff, Trash2 } from "lucide-react-native";
+import { useState } from "react";
+import { Pressable, Text, TextInput, View } from "react-native";
 
-import { PopoverMenu } from '@/shared/components/ui/PopoverMenu';
-import { colors } from '@/shared/config/colors';
-import { cn } from '@/shared/lib/cn';
-import { useT } from '@/shared/i18n';
+import { PopoverMenu } from "@/shared/components/ui/PopoverMenu";
+import { colors } from "@/shared/config/colors";
+import { useT } from "@/shared/i18n";
+import { cn } from "@/shared/lib/cn";
 
-import { CHAT_POPOVER_WIDTH } from './ChatListItem.config';
-import type { ChatItemPopoverProps } from './ChatItemPopover.types';
+import type { ChatItemPopoverProps } from "./ChatItemPopover.types";
+import { CHAT_POPOVER_WIDTH } from "./ChatListItem.config";
 
 type MenuItemProps = {
   icon: typeof Pin;
@@ -17,7 +17,12 @@ type MenuItemProps = {
   onPress: () => void;
 };
 
-function MenuItem({ icon: Icon, label, danger = false, onPress }: MenuItemProps) {
+function MenuItem({
+  icon: Icon,
+  label,
+  danger = false,
+  onPress,
+}: MenuItemProps) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -27,10 +32,7 @@ function MenuItem({ icon: Icon, label, danger = false, onPress }: MenuItemProps)
     >
       <Icon size={16} color={danger ? colors.accent : colors.textMuted} />
       <Text
-        className={cn(
-          'text-sm',
-          danger ? 'text-accent' : 'text-text-primary',
-        )}
+        className={cn("text-sm", danger ? "text-accent" : "text-text-primary")}
       >
         {label}
       </Text>
@@ -58,7 +60,7 @@ export function ChatItemPopover({
 
   /** Закрытие со сбросом режима в menu */
   const close = () => {
-    onModeChange('menu');
+    onModeChange("menu");
     onClose();
   };
 
@@ -77,20 +79,20 @@ export function ChatItemPopover({
       anchor={anchor}
       width={CHAT_POPOVER_WIDTH}
     >
-      {mode === 'menu' && (
+      {mode === "menu" && (
         <View>
           <MenuItem
             icon={Pencil}
-            label={t('popover.rename')}
+            label={t("popover.rename")}
             onPress={() => {
               // Подставляем текущее название при входе в режим переименования
               setRenameText(chat.title);
-              onModeChange('rename');
+              onModeChange("rename");
             }}
           />
           <MenuItem
             icon={chat.isPinned ? PinOff : Pin}
-            label={chat.isPinned ? t('popover.unpin') : t('popover.pin')}
+            label={chat.isPinned ? t("popover.unpin") : t("popover.pin")}
             onPress={() => {
               onTogglePin(chat);
               close();
@@ -98,77 +100,81 @@ export function ChatItemPopover({
           />
           <MenuItem
             icon={Trash2}
-            label={t('popover.delete')}
+            label={t("popover.delete")}
             danger
-            onPress={() => onModeChange('delete')}
+            onPress={() => onModeChange("delete")}
           />
         </View>
       )}
 
-      {mode === 'rename' && (
+      {mode === "rename" && (
         <View className="gap-2 p-2">
           <TextInput
             value={renameText}
             onChangeText={setRenameText}
-            placeholder={t('chats.renameChat')}
+            placeholder={t("chats.renameChat")}
             placeholderTextColor={colors.placeholder}
             autoFocus
             selectTextOnFocus
-            className="h-9 rounded-lg border border-white/10 bg-white/5 px-2 text-sm text-text-primary"
+            scrollEnabled={false}
+            multiline={false}
+            textAlignVertical="center"
+            style={{ height: 36, paddingVertical: 0 }}
+            className="rounded-lg border border-white/10 bg-white/5 px-2 text-sm text-text-primary"
           />
           <View className="flex-row justify-end gap-2">
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={t('common.cancel')}
+              accessibilityLabel={t("common.cancel")}
               onPress={close}
               className="rounded-lg px-3 py-1.5 active:bg-white/10"
             >
               <Text className="text-sm text-text-muted">
-                {t('common.cancel')}
+                {t("common.cancel")}
               </Text>
             </Pressable>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={t('common.save')}
+              accessibilityLabel={t("common.save")}
               onPress={handleSave}
               disabled={!canSave}
               className={cn(
-                'rounded-lg px-3 py-1.5',
-                canSave ? 'bg-accent active:bg-accent-soft' : 'bg-white/5',
+                "rounded-lg px-3 py-1.5",
+                canSave ? "bg-accent active:bg-accent-soft" : "bg-white/5",
               )}
             >
               <Text
                 className={cn(
-                  'text-sm font-medium',
-                  canSave ? 'text-white' : 'text-text-muted',
+                  "text-sm font-medium",
+                  canSave ? "text-white" : "text-text-muted",
                 )}
               >
-                {t('common.save')}
+                {t("common.save")}
               </Text>
             </Pressable>
           </View>
         </View>
       )}
 
-      {mode === 'delete' && (
+      {mode === "delete" && (
         <View className="gap-2 p-2">
           <Text className="text-sm text-text-primary">
-            {t('popover.deleteConfirm', { title: chat.title })}
+            {t("popover.deleteConfirm", { title: chat.title })}
           </Text>
           <View className="flex-row justify-end gap-2">
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={t('common.cancel')}
+              accessibilityLabel={t("common.cancel")}
               onPress={close}
               className="rounded-lg px-3 py-1.5 active:bg-white/10"
             >
               <Text className="text-sm text-text-muted">
-                {t('common.cancel')}
+                {t("common.cancel")}
               </Text>
             </Pressable>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={t('common.delete')}
+              accessibilityLabel={t("common.delete")}
               onPress={() => {
                 onDelete(chat.id);
                 close();
@@ -176,7 +182,7 @@ export function ChatItemPopover({
               className="rounded-lg bg-accent px-3 py-1.5 active:bg-accent-soft"
             >
               <Text className="text-sm font-medium text-white">
-                {t('common.delete')}
+                {t("common.delete")}
               </Text>
             </Pressable>
           </View>

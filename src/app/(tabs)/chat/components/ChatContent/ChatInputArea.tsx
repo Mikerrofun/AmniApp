@@ -1,6 +1,6 @@
+import { Send } from "lucide-react-native";
 import { useEffect, useRef } from "react";
 import { Pressable, TextInput, View } from "react-native";
-import { Send } from "lucide-react-native";
 
 import { useChatDraft, useChatsStore } from "@/features/chats";
 import { colors } from "@/shared/config/colors";
@@ -34,25 +34,29 @@ export function ChatInputArea({ chat }: ChatInputAreaProps) {
 
   return (
     <View className="flex-1 justify-end px-3 pb-3">
-      <View className="flex-row items-end gap-2 rounded-2xl border border-white/10 bg-white/5 p-2">
+      <View className="flex-row items-center gap-2 rounded-[20px] border border-white/10 bg-white/5 p-2">
         <TextInput
           ref={inputRef}
           value={draft}
           onChangeText={handleChange}
           onBlur={flush}
           multiline
+          textAlignVertical="center"
           placeholder={t("chatInput.placeholder")}
           placeholderTextColor={colors.placeholder}
+          style={{ paddingTop: 8, paddingBottom: 8 }}
           className="max-h-32 min-h-[36px] flex-1 px-2 text-sm text-text-primary"
         />
-        <Pressable
-          disabled
-          accessibilityRole="button"
-          accessibilityLabel={t("chatInput.send")}
-          className="h-9 w-9 items-center justify-center rounded-xl bg-white/5"
-        >
-          <Send size={16} color={colors.textMuted} />
-        </Pressable>
+        <View className="h-9 w-9 items-center justify-center rounded-[20px] bg-white/5">
+          <Pressable
+            disabled
+            accessibilityRole="button"
+            accessibilityLabel={t("chatInput.send")}
+            className="h-full w-full items-center justify-center"
+          >
+            <Send size={16} color={colors.textMuted} />
+          </Pressable>
+        </View>
       </View>
     </View>
   );
