@@ -15,13 +15,21 @@ export type ChatsState = {
    * так фокус не срабатывает при обычном переключении чатов.
    */
   focusChatId: string | null;
+  /**
+   * Черновики в памяти (сессионное состояние, аналог sessionStorage):
+   * переживают переключение чатов и вкладок, стираются при рестарте.
+   */
+  drafts: Record<string, string>;
+  /** Черновик временного чата (когда активный чат не выбран) */
+  globalDraft: string;
 
   loadChats: () => Promise<void>;
   createChat: (title: string) => Promise<ChatRecord>;
   renameChat: (id: string, title: string) => Promise<void>;
   deleteChat: (id: string) => Promise<void>;
   setPinned: (id: string, isPinned: boolean) => Promise<void>;
-  updateDraft: (id: string, draft: string) => Promise<void>;
+  setDraft: (id: string, draft: string) => void;
+  setGlobalDraft: (draft: string) => void;
   setActiveChat: (id: string | null) => void;
   setSortDirection: (direction: SortDirection) => void;
   consumeFocusChat: (id: string) => void;

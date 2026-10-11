@@ -1,8 +1,8 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
-import { getLocales } from 'expo-localization';
 
-import { defaultLocale, locales, type Locale } from './i18n.config';
 import { createTranslator, type Translator } from './translate';
+import { defaultLocale, type Locale } from './i18n.config';
+import { useLocaleStore } from './locale-store';
 
 type I18nContextValue = {
   locale: Locale;
@@ -11,22 +11,14 @@ type I18nContextValue = {
 
 export const I18nContext = createContext<I18nContextValue | null>(null);
 
-/** Локаль из настроек телефона, fallback — defaultLocale */
-function detectLocale(): Locale {
-  const languageTag = getLocales()[0]?.languageTag ?? '';
-  const base = languageTag.split('-')[0];
-
-  return (locales as readonly string[]).includes(base)
-    ? (base as Locale)
-    : defaultLocale;
-}
-
 /**
- * Провайдер i18n. Подключается один раз в _layout.tsx,
- * локаль определяется из настроек телефона.
+ * Провайдер i18n. Подключается один раз в _layout.tsx.
+ * Локаль берется из глобального стора (locale-store): вычисляется
+ * один раз при загрузке приложения по приоритету выбор юзера (TODO) →
+ * системная → дефолт.
  */
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const locale = useMemo(() => detectLocale(), []);
+  const locale = useLocaleStore((state) => state.locale);
   const t = useMemo(() => createTranslator(locale), [locale]);
   const value = useMemo(() => ({ locale, t }), [locale, t]);
 

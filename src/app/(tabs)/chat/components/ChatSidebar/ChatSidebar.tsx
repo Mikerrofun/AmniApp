@@ -18,6 +18,10 @@ import {
   useChatsStore,
   useCreateChat,
 } from "@/features/chats";
+import {
+  ScrollIndicator,
+  useScrollIndicator,
+} from "@/shared/components/ui/ScrollIndicator";
 import { colors } from "@/shared/config/colors";
 import { useLocaleContext, useT } from "@/shared/i18n";
 
@@ -44,6 +48,8 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
 
   // Поиск неактивен в этой итерации — только UI
   const [searchQuery, setSearchQuery] = useState("");
+
+  const scroll = useScrollIndicator();
 
   const sections = useMemo(
     () => groupChatsByDay(chats, sortDirection, locale, t("chats.pinned")),
@@ -112,33 +118,51 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
         </Pressable>
       </View>
 
-      <SectionList
-        className="mt-1 flex-1"
-        sections={sections}
-        keyExtractor={(chat) => chat.id}
-        renderItem={({ item }) => (
-          <ChatListItem
-            chat={item}
-            isActive={item.id === activeChatId}
-            onSelect={handleSelectChat}
-            onRename={renameChat}
-            onTogglePin={togglePin}
-            onDelete={deleteChat}
-          />
-        )}
-        renderSectionHeader={({ section }) => (
-          <ChatListSection section={section} />
-        )}
-        ListEmptyComponent={
-          !isLoading ? (
-            <Text className="px-2 pt-4 text-sm text-text-muted">
-              {t("chats.empty")}
-            </Text>
-          ) : null
-        }
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 8 }}
-      />
+      <View className="mt-1 flex-1">
+        <SectionList
+          className="flex-1"
+          sections={sections}
+          keyExtractor={(chat) => chat.id}
+          renderItem={({ item }) => (
+            <ChatListItem
+              chat={item}
+              isActive={item.id === activeChatId}
+              onSelect={handleSelectChat}
+              onRename={renameChat}
+              onTogglePin={togglePin}
+              onDelete={deleteChat}
+            />
+          )}
+          renderSectionHeader={({ section }) => (
+            <ChatListSection section={section} />
+          )}
+          ListEmptyComponent={
+            !isLoading ? (
+              <Text className="px-2 pt-4 text-sm text-text-muted">
+                {t("chats.empty")}
+              </Text>
+            ) : null
+          }
+          showsVerticalScrollIndicator={false}
+          onScroll={scroll.onScroll}
+          onContentSizeChange={(width, height) =>
+            scroll.onContentSizeChange({
+              nativeEvent: { contentSize: { width, height } },
+            })
+          }
+          onLayout={scroll.onLayout}
+          scrollEventThrottle={16}
+          contentContainerStyle={{ paddingBottom: 8 }}
+        />
+        {/* Тонкий индикатор прокрутки справа, когда чатов много */}
+        <ScrollIndicator
+          isVisible={scroll.isVisible}
+          thumbHeight={scroll.thumbHeight}
+          thumbTop={scroll.thumbTop}
+          side="right"
+          inset={0}
+        />
+      </View>
     </View>
   );
 }

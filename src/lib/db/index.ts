@@ -14,7 +14,6 @@ export {
   renameChat,
   deleteChat,
   setPinned,
-  updateDraft,
 } from './chats-repository';
 
 export type { ChatRecord, ChatMessageRecord } from '@/types/chat';

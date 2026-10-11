@@ -3,8 +3,6 @@ export type ChatRecord = {
   id: string;
   title: string;
   isPinned: boolean;
-  /** Черновик сообщения — сохраняется автоматически при наборе */
-  draft: string | null;
   createdAt: number;
   updatedAt: number;
 };
@@ -23,7 +21,6 @@ export type ChatRow = {
   id: string;
   title: string;
   is_pinned: number;
-  draft: string | null;
   created_at: number;
   updated_at: number;
 };

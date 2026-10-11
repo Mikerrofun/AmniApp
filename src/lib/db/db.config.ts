@@ -6,4 +6,4 @@
 export const DB_NAME = 'amniapp.db';
 
 /** Версия схемы — увеличивается при изменении миграций */
-export const DB_SCHEMA_VERSION = 1;
+export const DB_SCHEMA_VERSION = 2;

@@ -1,54 +1,35 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback } from 'react';
 
-import type { ChatRecord } from "@/types/chat";
+import { useChatsStore } from './chats-store';
 
-import { useChatsStore } from "./chats-store";
-
-const DRAFT_SAVE_DEBOUNCE_MS = 300;
-
-export function useChatDraft(chat: ChatRecord) {
-  const updateDraft = useChatsStore((state) => state.updateDraft);
-
-  const [draft, setDraft] = useState(chat.draft ?? "");
-
-  // Зеркало черновика для чтения вне рендера (flush по onBlur/unmount)
-  const draftRef = useRef(chat.draft ?? "");
-
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const flush = useCallback(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-
-    void updateDraft(chat.id, draftRef.current);
-  }, [chat.id, updateDraft]);
+/**
+ * Черновик поля ввода. Живет только в памяти (сессионное состояние,
+ * аналог sessionStorage): переживает переключение чатов и вкладок,
+ * стирается при рестарте приложения.
+ *
+ * chatId === null — временный чат (ничего не выбрано): текст идет
+ * в глобальный драфт. При создании реального чата глобальный драфт
+ * стирается, вернуться к временному чату невозможно.
+ */
+export function useChatDraft(chatId: string | null) {
+  const draft = useChatsStore((state) =>
+    chatId === null
+      ? state.globalDraft
+      : (state.drafts[chatId] ?? ''),
+  );
+  const setDraft = useChatsStore((state) => state.setDraft);
+  const setGlobalDraft = useChatsStore((state) => state.setGlobalDraft);
 
   const handleChange = useCallback(
     (text: string) => {
-      draftRef.current = text;
-      setDraft(text);
-
-      if (timerRef.current) clearTimeout(timerRef.current);
-
-      timerRef.current = setTimeout(() => {
-        timerRef.current = null;
-        void updateDraft(chat.id, text);
-      }, DRAFT_SAVE_DEBOUNCE_MS);
+      if (chatId === null) {
+        setGlobalDraft(text);
+      } else {
+        setDraft(chatId, text);
+      }
     },
-    [chat.id, updateDraft],
+    [chatId, setDraft, setGlobalDraft],
   );
 
-  // Сброс отложенной записи при размонтировании (смена чата / уход с экрана)
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-    };
-  }, []);
-
-  return { draft, handleChange, flush };
+  return { draft, handleChange };
 }

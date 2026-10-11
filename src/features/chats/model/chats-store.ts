@@ -14,6 +14,8 @@ export const useChatsStore = create<ChatsState>((set) => ({
   sortDirection: 'newest',
   isLoading: false,
   focusChatId: null,
+  drafts: {},
+  globalDraft: '',
 
   loadChats: async () => {
     set({ isLoading: true });
@@ -33,6 +35,9 @@ export const useChatsStore = create<ChatsState>((set) => ({
       chats: [chat, ...state.chats],
       activeChatId: chat.id,
       focusChatId: chat.id,
+      // Черновик временного чата переезжать в новый чат не должен:
+      // временный чат после создания реального недоступен
+      globalDraft: '',
     }));
 
     return chat;
@@ -51,11 +56,17 @@ export const useChatsStore = create<ChatsState>((set) => ({
   deleteChat: async (id) => {
     await chatsRepository.deleteChat(id);
 
-    set((state) => ({
-      chats: state.chats.filter((chat) => chat.id !== id),
-      activeChatId:
-        state.activeChatId === id ? null : state.activeChatId,
-    }));
+    set((state) => {
+      const drafts = { ...state.drafts };
+      delete drafts[id];
+
+      return {
+        chats: state.chats.filter((chat) => chat.id !== id),
+        drafts,
+        activeChatId:
+          state.activeChatId === id ? null : state.activeChatId,
+      };
+    });
   },
 
   setPinned: async (id, isPinned) => {
@@ -78,15 +89,10 @@ export const useChatsStore = create<ChatsState>((set) => ({
     }
   },
 
-  updateDraft: async (id, draft) => {
-    set((state) => ({
-      chats: state.chats.map((chat) =>
-        chat.id === id ? { ...chat, draft } : chat,
-      ),
-    }));
+  setDraft: (id, draft) =>
+    set((state) => ({ drafts: { ...state.drafts, [id]: draft } })),
 
-    await chatsRepository.updateDraft(id, draft);
-  },
+  setGlobalDraft: (draft) => set({ globalDraft: draft }),
 
   setActiveChat: (id) => set({ activeChatId: id }),
 
