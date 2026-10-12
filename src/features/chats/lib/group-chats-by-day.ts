@@ -5,7 +5,7 @@ import type { SortDirection } from '../model/chats-store.types';
 
 import {
   DAY_GROUP_DATE_OPTIONS,
-  DAY_GROUP_TITLE_SEPARATOR,
+  DAY_GROUP_DATE_WITH_YEAR_OPTIONS,
 } from './group-chats-by-day.config';
 
 /** Секция для SectionList: закрепленные или одна календарная группа */
@@ -25,12 +25,13 @@ function dayKey(timestamp: number): string {
 }
 
 function formatDayTitle(timestamp: number, locale: Locale): string {
-  const formatter = new Intl.DateTimeFormat(
-    locale,
-    DAY_GROUP_DATE_OPTIONS[locale],
-  );
+  const date = new Date(timestamp);
+  const isCurrentYear = date.getFullYear() === new Date().getFullYear();
+  const options = isCurrentYear
+    ? DAY_GROUP_DATE_OPTIONS[locale]
+    : DAY_GROUP_DATE_WITH_YEAR_OPTIONS[locale];
 
-  return formatter.format(new Date(timestamp));
+  return new Intl.DateTimeFormat(locale, options).format(date);
 }
 
 function sortChats(
@@ -45,7 +46,8 @@ function sortChats(
 /**
  * Группирует чаты для списка:
  * - закрепленные — отдельная секция всегда сверху, вне дневных групп;
- * - остальные — по календарным дням, заголовок «11.10 — N»;
+ * - остальные — по календарным дням, заголовок — только дата
+ *   («11 окт» / «Oct 12», для прошлых лет с годом: «11 окт 2025»);
  * - направление сортировки из sortDirection (внутри дня тот же порядок).
  */
 export function groupChatsByDay(
@@ -81,7 +83,7 @@ export function groupChatsByDay(
 
   const daySections: ChatListSection[] = dayKeys.map((key) => {
     const dayChats = sortChats(byDay.get(key) ?? [], sortDirection);
-    const title = `${formatDayTitle(dayChats[0].updatedAt, locale)}${DAY_GROUP_TITLE_SEPARATOR}${dayChats.length}`;
+    const title = formatDayTitle(dayChats[0].updatedAt, locale);
 
     return { key: `day-${key}`, title, data: dayChats };
   });

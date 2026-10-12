@@ -54,7 +54,6 @@ export function ChatInputArea({ chatId }: ChatInputAreaProps) {
             onScroll={scroll.onScroll}
             onContentSizeChange={scroll.onContentSizeChange}
             onLayout={scroll.onLayout}
-            scrollEventThrottle={16}
             style={{
               paddingTop: 8,
               paddingBottom: 8,
