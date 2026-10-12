@@ -1,40 +1,30 @@
-import { KeyboardAvoidingView, Platform, Text, View } from "react-native";
+import { Animated, Text, View } from "react-native";
 
 import { useChatsStore } from "@/features/chats";
 import { useT } from "@/shared/i18n";
 
 import type { ChatContentProps } from "./ChatContent.types";
 import { ChatInputArea } from "./ChatInputArea";
-import { useWebKeyboardInset } from "./useWebKeyboardInset";
+import { useKeyboardInset } from "./useKeyboardInset";
 
 /**
  * Контент страницы чата. Поле ввода видно всегда — даже когда чатов
  * еще нет: в этом случае текст идет в глобальный драфт временного
  * чата, а при будущей отправке такой чат будет создан.
  *
- * Клавиатура: на iOS — behavior="padding" (плавный подъем/опускание);
- * на Android — behavior="height", т.к. в edge-to-edge режиме
- * softwareKeyboardLayoutMode: resize не применяется (Expo Go), и окно
- * не ресайзится само; на web клавиатура — оверлей, перекрытие меряем
- * через visualViewport (useWebKeyboardInset).
+ * Клавиатура: отступ снизу из useKeyboardInset (события Keyboard на
+ * нативе, visualViewport на web) — KeyboardAvoidingView не используется,
+ * т.к. в edge-to-edge режиме Android не ресайзит окно.
  */
 export function ChatContent({ topInset }: ChatContentProps) {
   const t = useT();
-  const keyboardInset = useWebKeyboardInset();
+  const keyboardInset = useKeyboardInset();
   const activeChat = useChatsStore((state) =>
     state.chats.find((chat) => chat.id === state.activeChatId),
   );
 
-  const behavior =
-    Platform.OS === "ios"
-      ? "padding"
-      : Platform.OS === "android"
-        ? "height"
-        : undefined;
-
   return (
-    <KeyboardAvoidingView
-      behavior={behavior}
+    <Animated.View
       className="flex-1"
       style={{ paddingTop: topInset, paddingBottom: keyboardInset }}
     >
@@ -66,6 +56,6 @@ export function ChatContent({ topInset }: ChatContentProps) {
       </View>
 
       <ChatInputArea chatId={activeChat?.id ?? null} />
-    </KeyboardAvoidingView>
+    </Animated.View>
   );
 }

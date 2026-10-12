@@ -54,7 +54,7 @@ export function ChatListItem({
         <Text
           numberOfLines={1}
           className={cn(
-            "text-sm text-text-primary",
+            "text-base text-text-primary",
             isActive && "font-semibold",
           )}
         >
@@ -62,22 +62,22 @@ export function ChatListItem({
         </Text>
       </View>
 
-      {/* Гвоздик виден всегда: тап = pin/unpin сразу, без popover'а */}
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={
-          chat.isPinned ? t("popover.unpin") : t("popover.pin")
-        }
-        hitSlop={6}
-        onPress={() => onTogglePin(chat)}
-        className="p-1"
-      >
-        <Pin
-          size={14}
-          color={chat.isPinned ? colors.accent : colors.textMuted}
-          fill={chat.isPinned ? colors.accent : "transparent"}
-        />
-      </Pressable>
+      {/* Гвоздик только у закрепленных чатов; открепить — через меню */}
+      {chat.isPinned && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t("popover.unpin")}
+          hitSlop={6}
+          onPress={() => onTogglePin(chat)}
+          className="p-1"
+        >
+          <Pin
+            size={14}
+            color={colors.accent}
+            fill={colors.accent}
+          />
+        </Pressable>
+      )}
 
       {showDots && (
         <View ref={anchorRef} collapsable={false}>
