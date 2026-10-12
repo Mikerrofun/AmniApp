@@ -4,11 +4,10 @@ import { Platform, Pressable, Text, View } from "react-native";
 
 import { usePopoverAnchor } from "@/shared/components/ui/PopoverMenu";
 import { colors } from "@/shared/config/colors";
-import { useLocaleContext, useT } from "@/shared/i18n";
+import { useT } from "@/shared/i18n";
 import { cn } from "@/shared/lib/cn";
 
 import { ChatItemPopover } from "./ChatItemPopover";
-import { CHAT_TIME_OPTIONS } from "./ChatListItem.config";
 import type { ChatListItemProps, ChatPopoverMode } from "./ChatListItem.types";
 
 export function ChatListItem({
@@ -20,7 +19,6 @@ export function ChatListItem({
   onDelete,
 }: ChatListItemProps) {
   const t = useT();
-  const { locale } = useLocaleContext();
   const { anchorRef, anchor, measure } = usePopoverAnchor();
 
   const [popover, setPopover] = useState<{
@@ -37,10 +35,6 @@ export function ChatListItem({
   const closePopover = () => setPopover({ open: false, mode: "menu" });
 
   const showDots = Platform.OS === "web" ? isHovered || popover.open : true;
-
-  const timeLabel = new Intl.DateTimeFormat(locale, CHAT_TIME_OPTIONS).format(
-    new Date(chat.updatedAt),
-  );
 
   return (
     <Pressable
@@ -66,7 +60,6 @@ export function ChatListItem({
         >
           {chat.title}
         </Text>
-        <Text className="text-xs text-text-muted">{timeLabel}</Text>
       </View>
 
       {/* Гвоздик виден всегда: тап = pin/unpin сразу, без popover'а */}

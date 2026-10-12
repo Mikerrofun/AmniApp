@@ -2,15 +2,21 @@ import type { Locale } from '@/shared/i18n';
 
 /**
  * Формат даты в заголовке дневной группы, по локали.
- * ru: «11.10», en: «Oct 11»
+ * Текущий год: ru «11 окт», en «Oct 11».
  */
 export const DAY_GROUP_DATE_OPTIONS: Record<
   Locale,
   Intl.DateTimeFormatOptions
 > = {
-  ru: { day: '2-digit', month: '2-digit' },
+  ru: { day: 'numeric', month: 'short' },
   en: { month: 'short', day: 'numeric' },
 };
 
-/** Разделитель между датой и количеством чатов в заголовке группы */
-export const DAY_GROUP_TITLE_SEPARATOR = ' — ';
+/** Прошлые годы: год добавляется в конец — ru «11 окт 2025», en «Oct 11, 2025» */
+export const DAY_GROUP_DATE_WITH_YEAR_OPTIONS: Record<
+  Locale,
+  Intl.DateTimeFormatOptions
+> = {
+  ru: { day: 'numeric', month: 'short', year: 'numeric' },
+  en: { month: 'short', day: 'numeric', year: 'numeric' },
+};

@@ -5,27 +5,38 @@ import { useT } from "@/shared/i18n";
 
 import type { ChatContentProps } from "./ChatContent.types";
 import { ChatInputArea } from "./ChatInputArea";
+import { useWebKeyboardInset } from "./useWebKeyboardInset";
 
 /**
  * Контент страницы чата. Поле ввода видно всегда — даже когда чатов
  * еще нет: в этом случае текст идет в глобальный драфт временного
  * чата, а при будущей отправке такой чат будет создан.
  *
- * KeyboardAvoidingView плавно поднимает ввод над клавиатурой на iOS
- * (и опускает обратно); на Android экран ресайзится системой
- * (softwareKeyboardLayoutMode: resize), на web клавиатура не оверлей.
+ * Клавиатура: на iOS — behavior="padding" (плавный подъем/опускание);
+ * на Android — behavior="height", т.к. в edge-to-edge режиме
+ * softwareKeyboardLayoutMode: resize не применяется (Expo Go), и окно
+ * не ресайзится само; на web клавиатура — оверлей, перекрытие меряем
+ * через visualViewport (useWebKeyboardInset).
  */
 export function ChatContent({ topInset }: ChatContentProps) {
   const t = useT();
+  const keyboardInset = useWebKeyboardInset();
   const activeChat = useChatsStore((state) =>
     state.chats.find((chat) => chat.id === state.activeChatId),
   );
 
+  const behavior =
+    Platform.OS === "ios"
+      ? "padding"
+      : Platform.OS === "android"
+        ? "height"
+        : undefined;
+
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={behavior}
       className="flex-1"
-      style={{ paddingTop: topInset }}
+      style={{ paddingTop: topInset, paddingBottom: keyboardInset }}
     >
       <View className="flex-1">
         {activeChat ? (
