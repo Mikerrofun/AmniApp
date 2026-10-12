@@ -1,8 +1,17 @@
-import { useEffect, useRef } from 'react';
-import { Animated, Keyboard, Platform } from 'react-native';
+import { useEffect, useState, type RefObject } from 'react';
+import {
+  Animated,
+  Dimensions,
+  Keyboard,
+  Platform,
+  type View,
+} from 'react-native';
+
+/** Зазор между полем ввода и клавиатурой, px */
+const KEYBOARD_GAP = 8;
 
 /**
- * Высота клавиатуры как анимированный отступ снизу.
+ * Подъем контента над клавиатурой как анимированный отступ снизу.
  *
  * Почему не KeyboardAvoidingView: в edge-to-edge режиме (Expo SDK 53+,
  * Expo Go) Android не ресайзит окно под клавиатуру — behavior там
@@ -10,9 +19,18 @@ import { Animated, Keyboard, Platform } from 'react-native';
  * - iOS: keyboardWillShow/WillHide — успеваем за анимацией системы;
  * - Android: keyboardDidShow/DidHide + собственная анимация;
  * - Web: клавиатура — оверлей, перекрытие меряем через visualViewport.
+ *
+ * Подъем считается точно: меряем фактическое перекрытие целевого
+ * элемента (поле ввода) клавиатурой, а не берем полную высоту
+ * клавиатуры — полная высота поднимает контент слишком высоко над
+ * зоной, которую клавиатура не перекрывает (таб-бар, safe area).
  */
-export function useKeyboardInset(): Animated.Value {
-  const inset = useRef(new Animated.Value(0)).current;
+export function useKeyboardInset(
+  targetRef?: RefObject<View | null>,
+): Animated.Value {
+  // Стабильный инстанс через useState (а не useRef): компилятор React
+  // запрещает доступ к ref во время рендера, а значение нужно вернуть
+  const [inset] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
     if (Platform.OS === 'web') {
@@ -43,11 +61,28 @@ export function useKeyboardInset(): Animated.Value {
     const show = Keyboard.addListener(
       isIos ? 'keyboardWillShow' : 'keyboardDidShow',
       (event) => {
-        Animated.timing(inset, {
-          toValue: event.endCoordinates.height,
-          duration: isIos ? event.duration || 250 : 200,
-          useNativeDriver: false,
-        }).start();
+        const keyboardHeight = event.endCoordinates.height;
+        const duration = isIos ? event.duration || 250 : 200;
+
+        const animate = (toValue: number) =>
+          Animated.timing(inset, {
+            toValue,
+            duration,
+            useNativeDriver: false,
+          }).start();
+
+        const target = targetRef?.current;
+        if (!target) {
+          animate(keyboardHeight);
+          return;
+        }
+
+        // Перекрытие = нижний край элемента минус верхний край клавиатуры
+        target.measureInWindow((_x, y, _width, height) => {
+          const windowHeight = Dimensions.get('window').height;
+          const keyboardTop = windowHeight - keyboardHeight;
+          animate(Math.max(0, y + height - keyboardTop + KEYBOARD_GAP));
+        });
       },
     );
 
@@ -66,7 +101,7 @@ export function useKeyboardInset(): Animated.Value {
       show.remove();
       hide.remove();
     };
-  }, [inset]);
+  }, [inset, targetRef]);
 
   return inset;
 }

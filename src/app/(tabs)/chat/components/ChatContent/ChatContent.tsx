@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { Animated, Text, View } from "react-native";
 
 import { useChatsStore } from "@/features/chats";
@@ -14,11 +15,14 @@ import { useKeyboardInset } from "./useKeyboardInset";
  *
  * Клавиатура: отступ снизу из useKeyboardInset (события Keyboard на
  * нативе, visualViewport на web) — KeyboardAvoidingView не используется,
- * т.к. в edge-to-edge режиме Android не ресайзит окно.
+ * т.к. в edge-to-edge режиме Android не ресайзит окно. В хук передается
+ * ref на контейнер поля ввода: подъем равен фактическому перекрытию
+ * input'а клавиатурой, а не полной высоте клавиатуры.
  */
 export function ChatContent({ topInset }: ChatContentProps) {
   const t = useT();
-  const keyboardInset = useKeyboardInset();
+  const inputRef = useRef<View>(null);
+  const keyboardInset = useKeyboardInset(inputRef);
   const activeChat = useChatsStore((state) =>
     state.chats.find((chat) => chat.id === state.activeChatId),
   );
@@ -55,7 +59,9 @@ export function ChatContent({ topInset }: ChatContentProps) {
         )}
       </View>
 
-      <ChatInputArea chatId={activeChat?.id ?? null} />
+      <View ref={inputRef}>
+        <ChatInputArea chatId={activeChat?.id ?? null} />
+      </View>
     </Animated.View>
   );
 }

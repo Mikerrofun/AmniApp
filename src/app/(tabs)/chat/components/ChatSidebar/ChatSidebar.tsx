@@ -4,6 +4,7 @@ import { Pressable, SectionList, Text, TextInput, View } from "react-native";
 import Animated, {
   Easing,
   Extrapolation,
+  FadeIn,
   interpolate,
   useAnimatedStyle,
   useSharedValue,
@@ -118,7 +119,13 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
         </Pressable>
       </View>
 
-      <View className="mt-1 flex-1">
+      {/* key по направлению сортировки: при смене список
+          перемонтируется и мягко проявляется (FadeIn) */}
+      <Animated.View
+        key={sortDirection}
+        entering={FadeIn.duration(240)}
+        className="mt-1 flex-1"
+      >
         <SectionList
           className="flex-1"
           sections={sections}
@@ -162,7 +169,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
           side="right"
           inset={-6}
         />
-      </View>
+      </Animated.View>
     </View>
   );
 }
@@ -252,7 +259,7 @@ export function ChatSidebar({
           },
         ]}
       >
-        {/* На мобиле выбор/создание чата закрывает панель */}
+        {/* На мобиле выбор/создание чата закрыв��ет панель */}
         <SidebarContent onClose={isDesktop ? undefined : onClose} />
       </Animated.View>
     </>

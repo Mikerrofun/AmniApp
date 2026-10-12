@@ -17,29 +17,35 @@ export default function NavSwitch({ state }: BottomTabBarProps) {
     navLinks[0].key;
 
   return (
+    // Плавающая панель: боковые отступы не дают ей доходить до краев
+    // экрана (скругленные углы телефона не срезают панель), снизу —
+    // отступ по safe area (минимум 8px на устройствах без жестовой
+    // навигации)
     <View
-      style={{ paddingBottom: insets.bottom }}
-      className="w-full rounded-[20px] border-t border-white/5 bg-card"
+      className="w-full px-3"
+      style={{ paddingBottom: Math.max(insets.bottom, 8) }}
     >
-      <SwitchGlobal
-        equalWidth
-        value={currentKey}
-        onChange={(key) => {
-          const link = navLinks.find((item) => item.key === key);
-          if (link) router.navigate(link.href);
-        }}
-        options={navLinks.map((link) => ({
-          key: link.key,
-          component: (
-            <SwitcherButtonText
-              label={link.label}
-              isActive={link.key === currentKey}
-            />
-          ),
-        }))}
-        className="w-full bg-card"
-        sliderClassName="bg-accent"
-      />
+      <View className="w-full overflow-hidden rounded-[20px] border border-white/5 bg-card">
+        <SwitchGlobal
+          equalWidth
+          value={currentKey}
+          onChange={(key) => {
+            const link = navLinks.find((item) => item.key === key);
+            if (link) router.navigate(link.href);
+          }}
+          options={navLinks.map((link) => ({
+            key: link.key,
+            component: (
+              <SwitcherButtonText
+                label={link.label}
+                isActive={link.key === currentKey}
+              />
+            ),
+          }))}
+          className="w-full"
+          sliderClassName="bg-accent"
+        />
+      </View>
     </View>
   );
 }
