@@ -2,7 +2,7 @@ import { Text } from 'react-native';
 
 import type { ChatListSectionProps } from './ChatListSection.types';
 
-/** Заголовок секции списка: «Закрепленные» или «11.10 — N» */
+/** Заголовок секции списка: «Закрепленные» или дата дня («11 окт») */
 export function ChatListSection({ section }: ChatListSectionProps) {
   if (!section.title) return null;
 

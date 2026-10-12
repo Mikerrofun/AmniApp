@@ -39,7 +39,7 @@ export function ChatInputArea({ chatId }: ChatInputAreaProps) {
   }, [focusChatId, chatId, consumeFocusChat]);
 
   return (
-    <View className="px-3 pb-3">
+    <View className="px-4 pb-3">
       <View className="flex-row items-center gap-2 rounded-3xl border border-white/10 bg-white/5 p-2">
         <View className="relative min-w-0 flex-1">
           <TextInput
@@ -54,7 +54,6 @@ export function ChatInputArea({ chatId }: ChatInputAreaProps) {
             onScroll={scroll.onScroll}
             onContentSizeChange={scroll.onContentSizeChange}
             onLayout={scroll.onLayout}
-            scrollEventThrottle={16}
             style={{
               paddingTop: 8,
               paddingBottom: 8,

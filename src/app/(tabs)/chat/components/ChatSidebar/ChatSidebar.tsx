@@ -4,6 +4,9 @@ import { Pressable, SectionList, Text, TextInput, View } from "react-native";
 import Animated, {
   Easing,
   Extrapolation,
+  FadeIn,
+  FadeOut,
+  LinearTransition,
   interpolate,
   useAnimatedStyle,
   useSharedValue,
@@ -50,6 +53,12 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
   const [searchQuery, setSearchQuery] = useState("");
 
   const scroll = useScrollIndicator({ verticalPadding: 8 });
+
+  // Число закрепленных — сигнал перерисовки при pin/unpin
+  const pinnedCount = useMemo(
+    () => chats.filter((chat) => chat.isPinned).length,
+    [chats],
+  );
 
   const sections = useMemo(
     () => groupChatsByDay(chats, sortDirection, locale, t("chats.pinned")),
@@ -118,20 +127,33 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
         </Pressable>
       </View>
 
-      <View className="mt-1 flex-1">
+      {/* key по направлению сортировки и числу закрепленных: при
+          сортировке и pin/unpin список перемонтируется и мягко
+          проявляется (FadeIn) */}
+      <Animated.View
+        key={`${sortDirection}:${pinnedCount}`}
+        entering={FadeIn.duration(240)}
+        className="mt-1 flex-1"
+      >
         <SectionList
           className="flex-1"
           sections={sections}
           keyExtractor={(chat) => chat.id}
           renderItem={({ item }) => (
-            <ChatListItem
-              chat={item}
-              isActive={item.id === activeChatId}
-              onSelect={handleSelectChat}
-              onRename={renameChat}
-              onTogglePin={togglePin}
-              onDelete={deleteChat}
-            />
+            <Animated.View
+              layout={LinearTransition.duration(200)}
+              entering={FadeIn.duration(200)}
+              exiting={FadeOut.duration(200)}
+            >
+              <ChatListItem
+                chat={item}
+                isActive={item.id === activeChatId}
+                onSelect={handleSelectChat}
+                onRename={renameChat}
+                onTogglePin={togglePin}
+                onDelete={deleteChat}
+              />
+            </Animated.View>
           )}
           renderSectionHeader={({ section }) => (
             <ChatListSection section={section} />
@@ -162,7 +184,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
           side="right"
           inset={-6}
         />
-      </View>
+      </Animated.View>
     </View>
   );
 }
@@ -252,7 +274,7 @@ export function ChatSidebar({
           },
         ]}
       >
-        {/* На мобиле выбор/создание чата закрывает панель */}
+        {/* На мобиле выбор/создание чата закрыв��ет панель */}
         <SidebarContent onClose={isDesktop ? undefined : onClose} />
       </Animated.View>
     </>

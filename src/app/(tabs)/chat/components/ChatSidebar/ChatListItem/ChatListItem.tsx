@@ -1,14 +1,14 @@
 import { EllipsisVertical, Pin } from "lucide-react-native";
 import { useState } from "react";
-import { Platform, Pressable, Text, View } from "react-native";
+import { Platform, Pressable, View } from "react-native";
+import Animated, { FadeIn } from "react-native-reanimated";
 
 import { usePopoverAnchor } from "@/shared/components/ui/PopoverMenu";
 import { colors } from "@/shared/config/colors";
-import { useLocaleContext, useT } from "@/shared/i18n";
+import { useT } from "@/shared/i18n";
 import { cn } from "@/shared/lib/cn";
 
 import { ChatItemPopover } from "./ChatItemPopover";
-import { CHAT_TIME_OPTIONS } from "./ChatListItem.config";
 import type { ChatListItemProps, ChatPopoverMode } from "./ChatListItem.types";
 
 export function ChatListItem({
@@ -20,7 +20,6 @@ export function ChatListItem({
   onDelete,
 }: ChatListItemProps) {
   const t = useT();
-  const { locale } = useLocaleContext();
   const { anchorRef, anchor, measure } = usePopoverAnchor();
 
   const [popover, setPopover] = useState<{
@@ -38,10 +37,6 @@ export function ChatListItem({
 
   const showDots = Platform.OS === "web" ? isHovered || popover.open : true;
 
-  const timeLabel = new Intl.DateTimeFormat(locale, CHAT_TIME_OPTIONS).format(
-    new Date(chat.updatedAt),
-  );
-
   return (
     <Pressable
       accessibilityRole="button"
@@ -57,34 +52,37 @@ export function ChatListItem({
       )}
     >
       <View className="min-w-0 flex-1">
-        <Text
+        {/* key по названию: при переименовании перерисовывается
+            только этот элемент — заголовок мягко проявляется */}
+        <Animated.Text
+          key={chat.title}
+          entering={FadeIn.duration(200)}
           numberOfLines={1}
           className={cn(
-            "text-sm text-text-primary",
+            "text-base text-text-primary",
             isActive && "font-semibold",
           )}
         >
           {chat.title}
-        </Text>
-        <Text className="text-xs text-text-muted">{timeLabel}</Text>
+        </Animated.Text>
       </View>
 
-      {/* Гвоздик виден всегда: тап = pin/unpin сразу, без popover'а */}
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={
-          chat.isPinned ? t("popover.unpin") : t("popover.pin")
-        }
-        hitSlop={6}
-        onPress={() => onTogglePin(chat)}
-        className="p-1"
-      >
-        <Pin
-          size={14}
-          color={chat.isPinned ? colors.accent : colors.textMuted}
-          fill={chat.isPinned ? colors.accent : "transparent"}
-        />
-      </Pressable>
+      {/* Гвоздик только у закрепленных чатов; открепить — через меню */}
+      {chat.isPinned && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t("popover.unpin")}
+          hitSlop={6}
+          onPress={() => onTogglePin(chat)}
+          className="p-1"
+        >
+          <Pin
+            size={14}
+            color={colors.accent}
+            fill={colors.accent}
+          />
+        </Pressable>
+      )}
 
       {showDots && (
         <View ref={anchorRef} collapsable={false}>

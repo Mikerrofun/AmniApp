@@ -1,31 +1,36 @@
-import { KeyboardAvoidingView, Platform, Text, View } from "react-native";
+import { useRef } from "react";
+import { Animated, Text, View } from "react-native";
 
 import { useChatsStore } from "@/features/chats";
 import { useT } from "@/shared/i18n";
 
 import type { ChatContentProps } from "./ChatContent.types";
 import { ChatInputArea } from "./ChatInputArea";
+import { useKeyboardInset } from "./useKeyboardInset";
 
 /**
  * Контент страницы чата. Поле ввода видно всегда — даже когда чатов
  * еще нет: в этом случае текст идет в глобальный драфт временного
  * чата, а при будущей отправке такой чат будет создан.
  *
- * KeyboardAvoidingView плавно поднимает ввод над клавиатурой на iOS
- * (и опускает обратно); на Android экран ресайзится системой
- * (softwareKeyboardLayoutMode: resize), на web клавиатура не оверлей.
+ * Клавиатура: отступ снизу из useKeyboardInset (события Keyboard на
+ * нативе, visualViewport на web) — KeyboardAvoidingView не используется,
+ * т.к. в edge-to-edge режиме Android не ресайзит окно. В хук передается
+ * ref на контейнер поля ввода: подъем равен фактическому перекрытию
+ * input'а клавиатурой, а не полной высоте клавиатуры.
  */
 export function ChatContent({ topInset }: ChatContentProps) {
   const t = useT();
+  const inputRef = useRef<View>(null);
+  const keyboardInset = useKeyboardInset(inputRef);
   const activeChat = useChatsStore((state) =>
     state.chats.find((chat) => chat.id === state.activeChatId),
   );
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    <Animated.View
       className="flex-1"
-      style={{ paddingTop: topInset }}
+      style={{ paddingTop: topInset, paddingBottom: keyboardInset }}
     >
       <View className="flex-1">
         {activeChat ? (
@@ -54,7 +59,9 @@ export function ChatContent({ topInset }: ChatContentProps) {
         )}
       </View>
 
-      <ChatInputArea chatId={activeChat?.id ?? null} />
-    </KeyboardAvoidingView>
+      <View ref={inputRef}>
+        <ChatInputArea chatId={activeChat?.id ?? null} />
+      </View>
+    </Animated.View>
   );
 }
