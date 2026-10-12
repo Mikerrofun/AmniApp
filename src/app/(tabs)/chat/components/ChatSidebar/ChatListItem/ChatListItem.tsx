@@ -1,6 +1,7 @@
 import { EllipsisVertical, Pin } from "lucide-react-native";
 import { useState } from "react";
-import { Platform, Pressable, Text, View } from "react-native";
+import { Platform, Pressable, View } from "react-native";
+import Animated, { FadeIn } from "react-native-reanimated";
 
 import { usePopoverAnchor } from "@/shared/components/ui/PopoverMenu";
 import { colors } from "@/shared/config/colors";
@@ -51,7 +52,11 @@ export function ChatListItem({
       )}
     >
       <View className="min-w-0 flex-1">
-        <Text
+        {/* key по названию: при переименовании перерисовывается
+            только этот элемент — заголовок мягко проявляется */}
+        <Animated.Text
+          key={chat.title}
+          entering={FadeIn.duration(200)}
           numberOfLines={1}
           className={cn(
             "text-base text-text-primary",
@@ -59,7 +64,7 @@ export function ChatListItem({
           )}
         >
           {chat.title}
-        </Text>
+        </Animated.Text>
       </View>
 
       {/* Гвоздик только у закрепленных чатов; открепить — через меню */}
