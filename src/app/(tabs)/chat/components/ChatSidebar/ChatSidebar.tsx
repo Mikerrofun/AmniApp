@@ -70,13 +70,10 @@ function SidebarContent({
 
   const isSearchActive = query.trim() !== "";
 
-  // При закрытии панели поиск сбрасывается — при следующем открытии
-  // показывается обычный сгруппированный список
   useEffect(() => {
     if (!isOpen) resetSearch();
   }, [isOpen, resetSearch]);
 
-  // Число закрепленных — сигнал перерисовки при pin/unpin
   const pinnedCount = useMemo(
     () => chats.filter((chat) => chat.isPinned).length,
     [chats],
@@ -89,8 +86,6 @@ function SidebarContent({
 
   const handleSelectChat = (id: string) => {
     setActiveChat(id);
-    // Выбор чата сбрасывает поиск — при следующем открытии сайдбара
-    // показывается обычный список
     resetSearch();
     onClose?.();
   };
@@ -152,101 +147,96 @@ function SidebarContent({
         </Pressable>
       </View>
 
-      {/* key по направлению сортировки и числу закрепленных: при
-          сортировке и pin/unpin список перемонтируется и мягко
-          проявляется (FadeIn) */}
       <Animated.View
         key={`${sortDirection}:${pinnedCount}`}
         entering={FadeIn.duration(240)}
         className="mt-1 flex-1"
       >
-        {/* При непустом запросе — плоский список результатов поиска
-            (без группировки по датам), при пустом — обычный список */}
         {!isSearchActive ? (
-        <SectionList
-          className="flex-1"
-          sections={sections}
-          keyExtractor={(chat) => chat.id}
-          renderItem={({ item }) => (
-            <Animated.View
-              layout={LinearTransition.duration(200)}
-              entering={FadeIn.duration(200)}
-              exiting={FadeOut.duration(200)}
-            >
-              <ChatListItem
-                chat={item}
-                isActive={item.id === activeChatId}
-                onSelect={handleSelectChat}
-                onRename={renameChat}
-                onTogglePin={togglePin}
-                onDelete={deleteChat}
-              />
-            </Animated.View>
-          )}
-          renderSectionHeader={({ section }) => (
-            <ChatListSection section={section} />
-          )}
-          ListEmptyComponent={
-            !isLoading ? (
-              <Text className="px-2 pt-4 text-sm text-text-muted">
-                {t("chats.empty")}
-              </Text>
-            ) : null
-          }
-          showsVerticalScrollIndicator={false}
-          onScroll={scroll.onScroll}
-          onContentSizeChange={(width, height) =>
-            scroll.onContentSizeChange({
-              nativeEvent: { contentSize: { width, height } },
-            })
-          }
-          onLayout={scroll.onLayout}
-          scrollEventThrottle={16}
-          contentContainerStyle={{ paddingBottom: 8 }}
-        />
+          <SectionList
+            className="flex-1"
+            sections={sections}
+            keyExtractor={(chat) => chat.id}
+            renderItem={({ item }) => (
+              <Animated.View
+                layout={LinearTransition.duration(200)}
+                entering={FadeIn.duration(200)}
+                exiting={FadeOut.duration(200)}
+              >
+                <ChatListItem
+                  chat={item}
+                  isActive={item.id === activeChatId}
+                  onSelect={handleSelectChat}
+                  onRename={renameChat}
+                  onTogglePin={togglePin}
+                  onDelete={deleteChat}
+                />
+              </Animated.View>
+            )}
+            renderSectionHeader={({ section }) => (
+              <ChatListSection section={section} />
+            )}
+            ListEmptyComponent={
+              !isLoading ? (
+                <Text className="px-2 pt-4 text-sm text-text-muted">
+                  {t("chats.empty")}
+                </Text>
+              ) : null
+            }
+            showsVerticalScrollIndicator={false}
+            onScroll={scroll.onScroll}
+            onContentSizeChange={(width, height) =>
+              scroll.onContentSizeChange({
+                nativeEvent: { contentSize: { width, height } },
+              })
+            }
+            onLayout={scroll.onLayout}
+            scrollEventThrottle={16}
+            contentContainerStyle={{ paddingBottom: 8 }}
+          />
         ) : (
-        <FlatList
-          className="flex-1"
-          data={results}
-          keyExtractor={(result) => result.chat.id}
-          renderItem={({ item }) => (
-            <Animated.View
-              layout={LinearTransition.duration(200)}
-              entering={FadeIn.duration(200)}
-              exiting={FadeOut.duration(200)}
-            >
-              <ChatListItem
-                chat={item.chat}
-                isActive={item.chat.id === activeChatId}
-                onSelect={handleSelectChat}
-                onRename={renameChat}
-                onTogglePin={togglePin}
-                onDelete={deleteChat}
-                titleSegments={splitTitleByRanges(
-                  item.chat.title,
-                  item.titleRanges,
-                )}
-              />
-            </Animated.View>
-          )}
-          ListEmptyComponent={
-            !isSearching ? (
-              <Text className="px-2 pt-4 text-sm text-text-muted">
-                {t("chats.searchEmpty")}
-              </Text>
-            ) : null
-          }
-          showsVerticalScrollIndicator={false}
-          onScroll={scroll.onScroll}
-          onContentSizeChange={(width, height) =>
-            scroll.onContentSizeChange({
-              nativeEvent: { contentSize: { width, height } },
-            })
-          }
-          onLayout={scroll.onLayout}
-          scrollEventThrottle={16}
-          contentContainerStyle={{ paddingBottom: 8 }}
-        />
+          <FlatList
+            className="flex-1"
+            data={results}
+            keyExtractor={(result) => result.chat.id}
+            renderItem={({ item }) => (
+              <Animated.View
+                layout={LinearTransition.duration(200)}
+                entering={FadeIn.duration(200)}
+                exiting={FadeOut.duration(200)}
+              >
+                <ChatListItem
+                  chat={item.chat}
+                  isActive={item.chat.id === activeChatId}
+                  onSelect={handleSelectChat}
+                  onRename={renameChat}
+                  onTogglePin={togglePin}
+                  onDelete={deleteChat}
+                  titleSegments={splitTitleByRanges(
+                    item.chat.title,
+                    item.titleRanges,
+                  )}
+                />
+              </Animated.View>
+            )}
+            ListEmptyComponent={
+              !isSearching ? (
+                <Text className="px-2 pt-4 text-sm text-text-muted">
+                  {t("chats.searchEmpty")}
+                </Text>
+              ) : null
+            }
+            showsVerticalScrollIndicator={false}
+            onScroll={scroll.onScroll}
+            onContentSizeChange={(width, height) =>
+              scroll.onContentSizeChange({
+                nativeEvent: { contentSize: { width, height } },
+              })
+            }
+            onLayout={scroll.onLayout}
+            scrollEventThrottle={16}
+            contentContainerStyle={{ paddingBottom: 8 }}
+          />
         )}
         {/* Тонкий индикатор прокрутки справа, когда чатов много */}
         <ScrollIndicator
