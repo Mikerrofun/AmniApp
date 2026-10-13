@@ -16,4 +16,16 @@ export {
   setPinned,
 } from './chats-repository';
 
+export {
+  searchChatsByKeywords,
+  searchChatsByEmbedding,
+  updateChatEmbedding,
+  deleteChatEmbeddings,
+} from './search-repository';
+
 export type { ChatRecord, ChatMessageRecord } from '@/types/chat';
+export type {
+  ChatEmbeddingKind,
+  ChatEmbeddingSearchRecord,
+  ChatKeywordSearchRecord,
+} from '@/types/chat';

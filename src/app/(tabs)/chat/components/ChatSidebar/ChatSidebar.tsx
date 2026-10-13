@@ -1,6 +1,13 @@
 import { ArrowDown, ArrowUp, Plus } from "lucide-react-native";
-import { useEffect, useMemo, useState } from "react";
-import { Pressable, SectionList, Text, TextInput, View } from "react-native";
+import { useEffect, useMemo } from "react";
+import {
+  FlatList,
+  Pressable,
+  SectionList,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import Animated, {
   Easing,
   Extrapolation,
@@ -16,7 +23,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
   groupChatsByDay,
+  splitTitleByRanges,
   useChatActions,
+  useChatSearch,
   useChats,
   useChatsStore,
   useCreateChat,
@@ -37,22 +46,35 @@ import {
 } from "./ChatSidebar.config";
 import type { ChatSidebarProps } from "./ChatSidebar.types";
 
-function SidebarContent({ onClose }: { onClose?: () => void }) {
+function SidebarContent({
+  onClose,
+  isOpen,
+}: {
+  onClose?: () => void;
+  isOpen: boolean;
+}) {
   const t = useT();
   const { locale } = useLocaleContext();
   const { chats, isLoading } = useChats();
   const { createChat } = useCreateChat();
   const { renameChat, togglePin, deleteChat } = useChatActions();
+  const { query, results, isSearching, handleChangeText, resetSearch } =
+    useChatSearch();
 
   const activeChatId = useChatsStore((state) => state.activeChatId);
   const setActiveChat = useChatsStore((state) => state.setActiveChat);
   const sortDirection = useChatsStore((state) => state.sortDirection);
   const setSortDirection = useChatsStore((state) => state.setSortDirection);
 
-  // Поиск неактивен в этой итерации — только UI
-  const [searchQuery, setSearchQuery] = useState("");
-
   const scroll = useScrollIndicator({ verticalPadding: 8 });
+
+  const isSearchActive = query.trim() !== "";
+
+  // При закрытии панели поиск сбрасывается — при следующем открытии
+  // показывается обычный сгруппированный список
+  useEffect(() => {
+    if (!isOpen) resetSearch();
+  }, [isOpen, resetSearch]);
 
   // Число закрепленных — сигнал перерисовки при pin/unpin
   const pinnedCount = useMemo(
@@ -67,6 +89,9 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
 
   const handleSelectChat = (id: string) => {
     setActiveChat(id);
+    // Выбор чата сбрасывает поиск — при следующем открытии сайдбара
+    // показывается обычный список
+    resetSearch();
     onClose?.();
   };
 
@@ -98,8 +123,8 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
 
       <View className="mt-3 flex-row items-center gap-2">
         <TextInput
-          value={searchQuery}
-          onChangeText={setSearchQuery}
+          value={query}
+          onChangeText={handleChangeText}
           placeholder={t("chats.searchPlaceholder")}
           placeholderTextColor={colors.placeholder}
           scrollEnabled={false}
@@ -135,6 +160,9 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
         entering={FadeIn.duration(240)}
         className="mt-1 flex-1"
       >
+        {/* При непустом запросе — плоский список результатов поиска
+            (без группировки по датам), при пустом — обычный список */}
+        {!isSearchActive ? (
         <SectionList
           className="flex-1"
           sections={sections}
@@ -176,6 +204,50 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
           scrollEventThrottle={16}
           contentContainerStyle={{ paddingBottom: 8 }}
         />
+        ) : (
+        <FlatList
+          className="flex-1"
+          data={results}
+          keyExtractor={(result) => result.chat.id}
+          renderItem={({ item }) => (
+            <Animated.View
+              layout={LinearTransition.duration(200)}
+              entering={FadeIn.duration(200)}
+              exiting={FadeOut.duration(200)}
+            >
+              <ChatListItem
+                chat={item.chat}
+                isActive={item.chat.id === activeChatId}
+                onSelect={handleSelectChat}
+                onRename={renameChat}
+                onTogglePin={togglePin}
+                onDelete={deleteChat}
+                titleSegments={splitTitleByRanges(
+                  item.chat.title,
+                  item.titleRanges,
+                )}
+              />
+            </Animated.View>
+          )}
+          ListEmptyComponent={
+            !isSearching ? (
+              <Text className="px-2 pt-4 text-sm text-text-muted">
+                {t("chats.searchEmpty")}
+              </Text>
+            ) : null
+          }
+          showsVerticalScrollIndicator={false}
+          onScroll={scroll.onScroll}
+          onContentSizeChange={(width, height) =>
+            scroll.onContentSizeChange({
+              nativeEvent: { contentSize: { width, height } },
+            })
+          }
+          onLayout={scroll.onLayout}
+          scrollEventThrottle={16}
+          contentContainerStyle={{ paddingBottom: 8 }}
+        />
+        )}
         {/* Тонкий индикатор прокрутки справа, когда чатов много */}
         <ScrollIndicator
           isVisible={scroll.isVisible}
@@ -275,7 +347,10 @@ export function ChatSidebar({
         ]}
       >
         {/* На мобиле выбор/создание чата закрыв��ет панель */}
-        <SidebarContent onClose={isDesktop ? undefined : onClose} />
+        <SidebarContent
+          isOpen={isOpen}
+          onClose={isDesktop ? undefined : onClose}
+        />
       </Animated.View>
     </>
   );

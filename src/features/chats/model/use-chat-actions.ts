@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 
 import type { ChatRecord } from '@/types/chat';
 
+import { updateTitleEmbedding } from '../lib/update-title-embedding';
 import { useChatsStore } from './chats-store';
 
 /**
@@ -13,7 +14,11 @@ export function useChatActions() {
   const deleteChat = useChatsStore((state) => state.deleteChat);
 
   const handleRename = useCallback(
-    (id: string, title: string) => renameChat(id, title),
+    (id: string, title: string) => {
+      // Эмбединг названия перегенерируется после успешного rename,
+      // fire-and-forget: без ключа/при ошибке тихо пропускается
+      void renameChat(id, title).then(() => updateTitleEmbedding(id, title));
+    },
     [renameChat],
   );
 

@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 
 import { useT } from '@/shared/i18n';
 
+import { updateTitleEmbedding } from '../lib/update-title-embedding';
 import { useChatsStore } from './chats-store';
 
 /**
@@ -19,7 +20,10 @@ export function useCreateChat() {
     setIsCreating(true);
 
     try {
-      await createChat(t('chats.newChatDefaultTitle'));
+      const chat = await createChat(t('chats.newChatDefaultTitle'));
+
+      // Эмбединг названия — fire-and-forget, UI не блокируется
+      void updateTitleEmbedding(chat.id, chat.title);
     } finally {
       setIsCreating(false);
     }

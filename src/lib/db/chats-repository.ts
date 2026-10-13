@@ -3,8 +3,14 @@ import * as Crypto from 'expo-crypto';
 import type { ChatRecord, ChatRow } from '@/types/chat';
 
 import { openDb } from './migrations';
+import { deleteChatEmbeddings } from './search-repository';
 
-function mapRow(row: ChatRow): ChatRecord {
+export function mapChatRow(
+  row: Pick<
+    ChatRow,
+    'id' | 'title' | 'is_pinned' | 'created_at' | 'updated_at'
+  >,
+): ChatRecord {
   return {
     id: row.id,
     title: row.title,
@@ -21,7 +27,7 @@ export async function listChats(): Promise<ChatRecord[]> {
     'SELECT * FROM chats ORDER BY updated_at DESC',
   );
 
-  return rows.map(mapRow);
+  return rows.map(mapChatRow);
 }
 
 export async function createChat(title: string): Promise<ChatRecord> {
@@ -36,8 +42,8 @@ export async function createChat(title: string): Promise<ChatRecord> {
   };
 
   await db.runAsync(
-    `INSERT INTO chats (id, title, is_pinned, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO chats (id, title, is_pinned, created_at, updated_at, context)
+     VALUES (?, ?, ?, ?, ?, '')`,
     chat.id,
     chat.title,
     chat.isPinned ? 1 : 0,
@@ -60,8 +66,10 @@ export async function renameChat(id: string, title: string): Promise<void> {
 
 export async function deleteChat(id: string): Promise<void> {
   const db = await openDb();
-  // Сообщения удаляются каскадом (FK ON DELETE CASCADE)
+  // Сообщения удаляются каскадом (FK ON DELETE CASCADE),
+  // FTS-строка — триггером chats_ad, векторная — вручную
   await db.runAsync('DELETE FROM chats WHERE id = ?', id);
+  await deleteChatEmbeddings(id);
 }
 
 export async function setPinned(
