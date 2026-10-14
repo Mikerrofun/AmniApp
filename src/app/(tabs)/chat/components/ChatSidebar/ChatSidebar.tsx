@@ -122,22 +122,37 @@ function SidebarContent({
         </Pressable>
       </View>
 
-      <View className="mt-1 flex-1">
-        {/* Список целиком проявляется/растворяется одним блоком:
-            чаты и заголовки групп исчезают одновременно */}
-        <Animated.View
-          key={`${isSearchActive}:${sortDirection}:${pinnedCount}`}
-          entering={FadeIn.duration(200)}
-          exiting={FadeOut.duration(150)}
-          className="flex-1"
-        >
-          {!isSearchActive ? (
+      <View className="relative mt-1 flex-1">
+        {/* Затемнение при активном поиске */}
+        {isSearchActive && (
+          <Animated.View
+            entering={FadeIn.duration(300)}
+            exiting={FadeOut.duration(300)}
+            className="absolute inset-0 z-10 bg-black/20"
+            pointerEvents="none"
+          />
+        )}
+
+        {/* Список всех чатов (по умолчанию) */}
+        {!isSearchActive && (
+          <Animated.View
+            key={`all-chats:${sortDirection}:${pinnedCount}`}
+            entering={FadeIn.duration(300)}
+            exiting={FadeOut.duration(200)}
+            className="absolute inset-0"
+          >
             <SectionList
               className="flex-1"
               sections={sections}
               keyExtractor={(chat) => chat.id}
               renderItem={({ item }) => (
-                <Animated.View layout={LinearTransition.duration(200)}>
+                <Animated.View
+                  layout={LinearTransition.duration(200).easing(
+                    Easing.bezier(0.22, 1, 0.36, 1),
+                  )}
+                  entering={FadeIn.duration(250)}
+                  exiting={FadeOut.duration(150)}
+                >
                   <ChatListItem
                     chat={item}
                     isActive={item.id === activeChatId}
@@ -169,13 +184,29 @@ function SidebarContent({
               scrollEventThrottle={16}
               contentContainerStyle={{ paddingBottom: 8 }}
             />
-          ) : (
+          </Animated.View>
+        )}
+
+        {/* Список результатов поиска */}
+        {isSearchActive && (
+          <Animated.View
+            key="search-results"
+            entering={FadeIn.duration(300).delay(100)}
+            exiting={FadeOut.duration(200)}
+            className="absolute inset-0"
+          >
             <FlatList
               className="flex-1"
               data={results}
               keyExtractor={(result) => result.chat.id}
               renderItem={({ item }) => (
-                <Animated.View layout={LinearTransition.duration(200)}>
+                <Animated.View
+                  layout={LinearTransition.duration(200).easing(
+                    Easing.bezier(0.22, 1, 0.36, 1),
+                  )}
+                  entering={FadeIn.duration(250)}
+                  exiting={FadeOut.duration(150)}
+                >
                   <ChatListItem
                     chat={item.chat}
                     isActive={item.chat.id === activeChatId}
@@ -208,8 +239,9 @@ function SidebarContent({
               scrollEventThrottle={16}
               contentContainerStyle={{ paddingBottom: 8 }}
             />
-          )}
-        </Animated.View>
+          </Animated.View>
+        )}
+
         {/* Тонкий индикатор прокрутки справа, когда чатов много */}
         <ScrollIndicator
           isVisible={scroll.isVisible}

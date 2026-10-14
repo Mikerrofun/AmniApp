@@ -1,5 +1,5 @@
 import { EllipsisVertical, Pin } from "lucide-react-native";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 
 import { colors } from "@/shared/config/colors";
@@ -49,7 +49,7 @@ export function ChatListItem({
             только этот элемент — заголовок мягко проявляется */}
         <Animated.Text
           key={chat.title}
-          entering={FadeIn.duration(200)}
+          entering={FadeIn.duration(250)}
           numberOfLines={1}
           className={cn(
             "text-base text-text-primary",
@@ -58,8 +58,9 @@ export function ChatListItem({
         >
           {titleSegments
             ? titleSegments.map((segment, index) => (
-                <Text
+                <Animated.Text
                   key={`${index}:${segment.text}`}
+                  entering={FadeIn.duration(300).delay(index * 20)}
                   style={
                     segment.isMatch
                       ? { color: colors.accent, fontWeight: "600" }
@@ -67,7 +68,7 @@ export function ChatListItem({
                   }
                 >
                   {segment.text}
-                </Text>
+                </Animated.Text>
               ))
             : chat.title}
         </Animated.Text>
@@ -82,11 +83,7 @@ export function ChatListItem({
           onPress={() => onTogglePin(chat)}
           className="p-1"
         >
-          <Pin
-            size={14}
-            color={colors.accent}
-            fill={colors.accent}
-          />
+          <Pin size={14} color={colors.accent} fill={colors.accent} />
         </Pressable>
       )}
 
