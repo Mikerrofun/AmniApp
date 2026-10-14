@@ -31,8 +31,7 @@ export function ChatInputArea({ chatId }: ChatInputAreaProps) {
 
   const scroll = useScrollIndicator({ verticalPadding: 4 });
 
-  // Фокус после создания чата (флаг снимается, чтобы не фокусить
-  // при обычном переключении чатов)
+  // Фокус после создания чата
   useEffect(() => {
     if (chatId !== null && focusChatId === chatId) {
       consumeFocusChat(chatId);
@@ -40,8 +39,7 @@ export function ChatInputArea({ chatId }: ChatInputAreaProps) {
     }
   }, [focusChatId, chatId, consumeFocusChat]);
 
-  // Фокус поля временного чата: кнопка временного чата инкрементит
-  // токен, фокус срабатывает только на изменение (не при монтировании)
+  // Фокус поля временного чата
   useEffect(() => {
     if (focusInputToken === lastFocusTokenRef.current) return;
 

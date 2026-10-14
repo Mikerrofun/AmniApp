@@ -46,8 +46,6 @@ export function useChatPopover(chatId: string, onRenameComplete?: () => void) {
     [measure],
   );
 
-  // На web якорь (кнопка меню) монтируется только при открытом popover'е,
-  // поэтому после открытия домеряем, когда он появился
   useEffect(() => {
     if (effectivePopover.open && !anchor) measure();
   }, [effectivePopover.open, anchor, measure]);
