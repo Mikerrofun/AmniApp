@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useWindowDimensions } from "react-native";
 
+import type { SortDirection } from "@/features/chats";
 import {
   groupChatsByDay,
   useChatsStore,
   useCreateChat,
 } from "@/features/chats";
-import type { SortDirection } from "@/features/chats";
 import type { ChatRecord } from "@/types/chat";
 
 import {
@@ -61,8 +61,6 @@ export function useChatSections(
   return { sections, pinnedCount };
 }
 
-/** При закрытии панели поиск сбрасывается — при следующем открытии
- * показывается обычный сгруппированный список */
 export function useSearchResetOnClose(
   isOpen: boolean,
   resetSearch: () => void,
@@ -85,8 +83,7 @@ export function useSidebarHandlers(
   const handleSelectChat = useCallback(
     (id: string) => {
       setActiveChat(id);
-      // Выбор чата сбрасывает поиск — при следующем открытии сайдбара
-      // показывается обычный список
+
       resetSearch();
       onClose?.();
     },
