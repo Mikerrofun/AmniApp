@@ -60,7 +60,16 @@ export function useChatPopover() {
   /** На web кнопка меню видна на hover или при открытом popover'е */
   const showDots = Platform.OS === "web" ? isHovered || popover.open : true;
 
-  return { anchorRef, anchor, hoverHandlers, popover, openPopover, closePopover, setMode, showDots };
+  return {
+    anchorRef,
+    anchor,
+    hoverHandlers,
+    popover,
+    openPopover,
+    closePopover,
+    setMode,
+    showDots,
+  };
 }
 ```
 
@@ -83,7 +92,10 @@ export function useChatPopover() {
 ```ts
 // src/app/(tabs)/chat/components/ChatSidebar/ChatSidebar.hooks.ts
 /** Секции сгруппированного списка + число закрепленных (сигнал перерисовки) */
-export function useChatSections(chats: ChatRecord[], sortDirection: SortDirection) {
+export function useChatSections(
+  chats: ChatRecord[],
+  sortDirection: SortDirection,
+) {
   const { locale } = useLocaleContext();
   const t = useT();
 
@@ -100,7 +112,10 @@ export function useChatSections(chats: ChatRecord[], sortDirection: SortDirectio
   return { sections, pinnedCount };
 }
 
-export function useSearchResetOnClose(isOpen: boolean, resetSearch: () => void) {
+export function useSearchResetOnClose(
+  isOpen: boolean,
+  resetSearch: () => void,
+) {
   useEffect(() => {
     if (!isOpen) resetSearch();
   }, [isOpen, resetSearch]);
@@ -177,10 +192,15 @@ export function mergeSearchResults(
       keywordOnly.push(result);
       continue;
     }
-    both.push({ ...result, sources: [...result.sources, ...embedding.sources] });
+    both.push({
+      ...result,
+      sources: [...result.sources, ...embedding.sources],
+    });
   }
 
-  const embeddingOnly = embeddingResults.filter((r) => !keywordIds.has(r.chat.id));
+  const embeddingOnly = embeddingResults.filter(
+    (r) => !keywordIds.has(r.chat.id),
+  );
 
   return [...both, ...keywordOnly, ...embeddingOnly];
 }
@@ -217,16 +237,15 @@ EXPO_PUBLIC_OPENROUTER_API_KEY=
 ### Изменённые файлы (6 шт)
 
 **Декомпозиция UI:**
+
 1. `src/app/(tabs)/chat/components/ChatSidebar/ChatListItem/useChatPopover.ts` — новый хук: состояние/якорь/hover popover'а.
 2. `src/app/(tabs)/chat/components/ChatSidebar/ChatListItem/ChatListItem.tsx` — подключает `useChatPopover`, стал presentational.
 3. `src/app/(tabs)/chat/components/ChatSidebar/ChatSidebar.hooks.ts` — добавлены `useChatSections`, `useSearchResetOnClose`, `useSidebarHandlers`.
 4. `src/app/(tabs)/chat/components/ChatSidebar/ChatSidebar.tsx` — `SidebarContent` на хуках, единая анимация переключения списков.
 
-**Логика поиска:**
-5. `src/features/chats/lib/merge-search-results.ts` — приоритизация `both → keyword-only → embedding-only`.
+**Логика поиска:** 5. `src/features/chats/lib/merge-search-results.ts` — приоритизация `both → keyword-only → embedding-only`.
 
-**Конфигурация:**
-6. `.env.example` — документирован `EXPO_PUBLIC_OPENROUTER_API_KEY`.
+**Конфигурация:** 6. `.env.example` — документирован `EXPO_PUBLIC_OPENROUTER_API_KEY`.
 
 ### Результаты
 
