@@ -118,14 +118,14 @@ return { ..., popover: effectivePopover, ... };
 
 #### Кто за что отвечает (возвращаемые ручки)
 
-| Ручка | Ответственность | Авто-rename |
-|---|---|---|
-| `popover` | Эффективное состояние для рендера (`ChatItemPopover` читает `open`/`mode`) | Вычисляется из сигнала, минуя локальный стейт |
-| `openPopover(mode)` | Ручное открытие: `measure()` якоря + `setPopover` | Не участвует — авто-rename открывается без вызова |
-| `setMode(mode)` | Переключение режима внутри открытого popover'а (menu → rename из меню) | Работает поверх, но в авто-режиме локальный `mode` не читается — сигнал перекрывает |
-| `handlePopoverClose` | **Единая точка закрытия** — см. ниже | Ветвится по `isAutoRename` |
-| `anchorRef` / `anchor` | Позиционирование popover'а у кнопки dots | Домер после открытия (нюанс web) |
-| `hoverHandlers` / `showDots` | Видимость кнопки dots (web: hover или открыт popover) | `showDots` учитывает `effectivePopover.open`, поэтому dots видны, пока открыт авто-rename |
+| Ручка                        | Ответственность                                                            | Авто-rename                                                                               |
+| ---------------------------- | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `popover`                    | Эффективное состояние для рендера (`ChatItemPopover` читает `open`/`mode`) | Вычисляется из сигнала, минуя локальный стейт                                             |
+| `openPopover(mode)`          | Ручное открытие: `measure()` якоря + `setPopover`                          | Не участвует — авто-rename открывается без вызова                                         |
+| `setMode(mode)`              | Переключение режима внутри открытого popover'а (menu → rename из меню)     | Работает поверх, но в авто-режиме локальный `mode` не читается — сигнал перекрывает       |
+| `handlePopoverClose`         | **Единая точка закрытия** — см. ниже                                       | Ветвится по `isAutoRename`                                                                |
+| `anchorRef` / `anchor`       | Позиционирование popover'а у кнопки dots                                   | Домер после открытия (нюанс web)                                                          |
+| `hoverHandlers` / `showDots` | Видимость кнопки dots (web: hover или открыт popover)                      | `showDots` учитывает `effectivePopover.open`, поэтому dots видны, пока открыт авто-rename |
 
 #### `handlePopoverClose` — ветвление по источнику открытия
 
@@ -170,12 +170,12 @@ useEffect(() => {
 ```ts
 const handlePress = () => {
   if (activeChatId === null) {
-    setGlobalDraft("");            // уже во временном — чистим черновик
+    setGlobalDraft(""); // уже во временном — чистим черновик
   } else {
-    setActiveChat(null);           // текст остаётся в драфте активного чата
+    setActiveChat(null); // текст остаётся в драфте активного чата
   }
   requestInputFocus();
-  onCloseSidebar?.();              // на десктопе не передаётся
+  onCloseSidebar?.(); // на десктопе не передаётся
 };
 ```
 
