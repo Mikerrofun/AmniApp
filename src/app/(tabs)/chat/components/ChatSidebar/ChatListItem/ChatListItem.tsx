@@ -1,15 +1,14 @@
 import { EllipsisVertical, Pin } from "lucide-react-native";
-import { useState } from "react";
-import { Platform, Pressable, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 
-import { usePopoverAnchor } from "@/shared/components/ui/PopoverMenu";
 import { colors } from "@/shared/config/colors";
 import { useT } from "@/shared/i18n";
 import { cn } from "@/shared/lib/cn";
 
 import { ChatItemPopover } from "./ChatItemPopover";
-import type { ChatListItemProps, ChatPopoverMode } from "./ChatListItem.types";
+import type { ChatListItemProps } from "./ChatListItem.types";
+import { useChatPopover } from "./useChatPopover";
 
 export function ChatListItem({
   chat,
@@ -21,22 +20,16 @@ export function ChatListItem({
   titleSegments,
 }: ChatListItemProps) {
   const t = useT();
-  const { anchorRef, anchor, measure } = usePopoverAnchor();
-
-  const [popover, setPopover] = useState<{
-    open: boolean;
-    mode: ChatPopoverMode;
-  }>({ open: false, mode: "menu" });
-  const [isHovered, setIsHovered] = useState(false);
-
-  const openPopover = (mode: ChatPopoverMode) => {
-    measure();
-    setPopover({ open: true, mode });
-  };
-
-  const closePopover = () => setPopover({ open: false, mode: "menu" });
-
-  const showDots = Platform.OS === "web" ? isHovered || popover.open : true;
+  const {
+    anchorRef,
+    anchor,
+    hoverHandlers,
+    popover,
+    openPopover,
+    closePopover,
+    setMode,
+    showDots,
+  } = useChatPopover();
 
   return (
     <Pressable
@@ -45,8 +38,7 @@ export function ChatListItem({
       accessibilityState={{ selected: isActive }}
       onPress={() => onSelect(chat.id)}
       onLongPress={() => openPopover("menu")}
-      onHoverIn={() => setIsHovered(true)}
-      onHoverOut={() => setIsHovered(false)}
+      {...hoverHandlers}
       className={cn(
         "flex-row items-center gap-1 rounded-xl px-2 py-2",
         isActive ? "bg-white/10" : "active:bg-white/5",
@@ -118,7 +110,7 @@ export function ChatListItem({
         open={popover.open}
         anchor={anchor}
         onClose={closePopover}
-        onModeChange={(mode) => setPopover((prev) => ({ ...prev, mode }))}
+        onModeChange={setMode}
         onRename={onRename}
         onTogglePin={onTogglePin}
         onDelete={onDelete}
