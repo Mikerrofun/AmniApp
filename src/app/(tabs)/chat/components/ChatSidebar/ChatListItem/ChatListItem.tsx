@@ -15,6 +15,7 @@ export function ChatListItem({
   isActive,
   onSelect,
   onRename,
+  onRenameComplete,
   onTogglePin,
   onDelete,
   titleSegments,
@@ -26,10 +27,10 @@ export function ChatListItem({
     hoverHandlers,
     popover,
     openPopover,
-    closePopover,
+    handlePopoverClose,
     setMode,
     showDots,
-  } = useChatPopover();
+  } = useChatPopover(chat.id, onRenameComplete);
 
   return (
     <Pressable
@@ -106,7 +107,7 @@ export function ChatListItem({
         mode={popover.mode}
         open={popover.open}
         anchor={anchor}
-        onClose={closePopover}
+        onClose={handlePopoverClose}
         onModeChange={setMode}
         onRename={onRename}
         onTogglePin={onTogglePin}

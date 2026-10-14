@@ -7,6 +7,11 @@ export type ChatListItemProps = {
   isActive: boolean;
   onSelect: (id: string) => void;
   onRename: (id: string, title: string) => void;
+  /**
+   * Завершение авто-rename нового чата (Save/Cancel/закрытие popover'а):
+   * панель закрывается. На обычные rename из меню не реагирует.
+   */
+  onRenameComplete?: () => void;
   onTogglePin: (chat: ChatRecord) => void;
   onDelete: (id: string) => void;
   /**

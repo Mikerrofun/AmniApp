@@ -9,6 +9,7 @@
     "searchPlaceholder": "Search chats",
     "newChat": "New chat",
     "newChatDefaultTitle": "New chat",
+    "newTempChat": "New temporary chat",
     "empty": "No chats yet",
     "searchEmpty": "No results found",
     "pinned": "Pinned",

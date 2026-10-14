@@ -26,6 +26,8 @@ export function ChatInputArea({ chatId }: ChatInputAreaProps) {
   const inputRef = useRef<TextInput>(null);
   const focusChatId = useChatsStore((state) => state.focusChatId);
   const consumeFocusChat = useChatsStore((state) => state.consumeFocusChat);
+  const focusInputToken = useChatsStore((state) => state.focusInputToken);
+  const lastFocusTokenRef = useRef(focusInputToken);
 
   const scroll = useScrollIndicator({ verticalPadding: 4 });
 
@@ -37,6 +39,15 @@ export function ChatInputArea({ chatId }: ChatInputAreaProps) {
       inputRef.current?.focus();
     }
   }, [focusChatId, chatId, consumeFocusChat]);
+
+  // Фокус поля временного чата: кнопка временного чата инкрементит
+  // токен, фокус срабатывает только на изменение (не при монтировании)
+  useEffect(() => {
+    if (focusInputToken === lastFocusTokenRef.current) return;
+
+    lastFocusTokenRef.current = focusInputToken;
+    inputRef.current?.focus();
+  }, [focusInputToken]);
 
   return (
     <View className="px-4 pb-3">

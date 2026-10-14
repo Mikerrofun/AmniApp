@@ -2,8 +2,8 @@ import { getEmbeddingsClient } from '@/lib/ai/embeddings';
 import { updateChatEmbedding } from '@/lib/db';
 
 /**
- * Перегенерирует title_embedding чата. Вызывается в точках изменения
- * title — создание чата и rename. Fire-and-forget: отсутствие ключа
+ * Перегенерирует title_embedding чата. Вызывается при rename.
+ * Fire-and-forget: отсутствие ключа
  * в env или ошибка запроса тихо пропускаются, колонка остается
  * NULL/старой до следующей попытки; keyword-поиск не затрагивается.
  */
@@ -23,6 +23,6 @@ export async function updateTitleEmbedding(
 
     await updateChatEmbedding(chatId, 'title', vector);
   } catch {
-    // Тихая деградация: повторная попытка при следующем rename/создании
+    // Тихая деградация: повторная попытка при следующем rename
   }
 }

@@ -71,8 +71,12 @@ function SidebarContent({
   useSearchResetOnClose(isOpen, resetSearch);
 
   const { sections, pinnedCount } = useChatSections(chats, sortDirection);
-  const { handleSelectChat, handleCreateChat, handleToggleSort } =
-    useSidebarHandlers(onClose, resetSearch);
+  const {
+    handleSelectChat,
+    handleCreateChat,
+    handleRenameComplete,
+    handleToggleSort,
+  } = useSidebarHandlers(onClose, resetSearch);
 
   return (
     <View
@@ -158,6 +162,7 @@ function SidebarContent({
                     isActive={item.id === activeChatId}
                     onSelect={handleSelectChat}
                     onRename={renameChat}
+                    onRenameComplete={handleRenameComplete}
                     onTogglePin={togglePin}
                     onDelete={deleteChat}
                   />
@@ -212,6 +217,7 @@ function SidebarContent({
                     isActive={item.chat.id === activeChatId}
                     onSelect={handleSelectChat}
                     onRename={renameChat}
+                    onRenameComplete={handleRenameComplete}
                     onTogglePin={togglePin}
                     onDelete={deleteChat}
                     titleSegments={splitTitleByRanges(
