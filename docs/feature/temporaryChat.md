@@ -77,30 +77,91 @@ useEffect(() => {
 
 Токен-счётчик, а не булев флаг: фокус срабатывает только на изменение, повторный тап по кнопке снова фокусит, монтирование — нет.
 
-### Авто-rename нового чата (useChatPopover)
+### Авто-rename нового чата (useChatPopover) — подробно
 
-Сигнал стора выводится в производное состояние — без `setState` в эффекте (правило линта react-compiler) и без каскадного рендера:
+`useChatPopover(chatId, onRenameComplete?)` — единственный владелец логики popover'а элемента списка. Внутри него сосуществуют **два независимых источника состояния**, и понимание их разделения — ключ ко всему механизму.
+
+#### Два источника состояния
 
 ```ts
+// 1. Локальное состояние — ручные открытия (меню по dots, rename из меню)
+const [popover, setPopover] = useState(INITIAL_POPOVER); // { open: false, mode: "menu" }
+
+// 2. Сигнал стора — «этот чат создан кнопкой "Новый чат" и должен
+//    открыться в rename прямо сейчас»
 const pendingRenameChatId = useChatsStore((s) => s.pendingRenameChatId);
 const consumePendingRename = useChatsStore((s) => s.consumePendingRename);
-
-// производное состояние, а не useEffect+setState
-const autoRename = pendingRenameChatId === chatId;
-const mode = autoRename ? "rename" : manualMode;
-
-const handlePopoverClose = () => {
-  if (autoRename) {
-    consumePendingRename(chatId);
-    onRenameComplete?.(); // панель закрывается только здесь
-  }
-  setManualMode(null);
-};
 ```
 
-- Save/Cancel/тап вне → сигнал погашен, `onRenameComplete` → панель закрывается.
-- Обычный rename из меню поведение панели не меняет.
-- Нюанс web: якорь popover'а монтируется только при открытом popover'е, поэтому после открытия нужен домер якоря — иначе авто-rename не позиционируется.
+Локальное состояние ничего не знает об авто-rename, сигнал стора ничего не знает о ручных открытиях. Они не синхронизируются и не мержатся — вместо этого вычисляется **эффективное** состояние:
+
+```ts
+const isAutoRename = pendingRenameChatId === chatId;
+
+const effectivePopover = isAutoRename
+  ? { open: true, mode: "rename" as ChatPopoverMode } // сигнал перекрывает всё
+  : popover;                                          // иначе — как обычно
+
+// наружу отдаётся только effectivePopover, локальный popover недоступен
+return { ..., popover: effectivePopover, ... };
+```
+
+#### Как определяется «это авто-rename»
+
+Сравнение — **по id, а не по факту открытия**: `pendingRenameChatId === chatId`. Каждый экземпляр `ChatListItem` знает свой `chatId` и на каждом рендере проверяет, адресован ли сигнал именно ему. Отсюда три следствия:
+
+1. **Сигнал адресный.** После создания чата сигнал видит только один элемент списка — тот, чей `id` совпал. Остальные элементы читают тот же стор, но сравнение даёт `false`, и их popover'ы остаются закрытыми.
+2. **Сигнал переживает рендер списка.** Новый чат появляется в `FlatList` асинхронно: в момент `createChat()` элемента ещё нет в DOM. Если бы «открыть rename» было локальным стейтом, его было бы некому выставить. Сигнал лежит в сторе, и когда элемент наконец монтируется, первое же вычисление `effectivePopover` даёт `{ open: true, mode: "rename" }` — popover открывается «сам», без единого эффекта.
+3. **Сигнал одноразовый и гасится владельцем.** `consumePendingRename(id)` в сторе затирает `pendingRenameChatId` в `null` **только если id совпал** — защита от гонки: если сигнал уже погашен другим (устаревшим) экземпляром или переустановлен новым созданием чата, чужой `consume` ничего не сломает.
+
+Важно: `isAutoRename` — не флаг «состояние», а **производное значение**, пересчитываемое на каждом рендере из стора. Никакого `useEffect` + `setState` (это запрещено правилом линта react-compiler и давало бы каскадный рендер): сигнал изменился → ререндер подписчика → `effectivePopover` пересчитался → popover открыт. Точка.
+
+#### Кто за что отвечает (возвращаемые ручки)
+
+| Ручка | Ответственность | Авто-rename |
+|---|---|---|
+| `popover` | Эффективное состояние для рендера (`ChatItemPopover` читает `open`/`mode`) | Вычисляется из сигнала, минуя локальный стейт |
+| `openPopover(mode)` | Ручное открытие: `measure()` якоря + `setPopover` | Не участвует — авто-rename открывается без вызова |
+| `setMode(mode)` | Переключение режима внутри открытого popover'а (menu → rename из меню) | Работает поверх, но в авто-режиме локальный `mode` не читается — сигнал перекрывает |
+| `handlePopoverClose` | **Единая точка закрытия** — см. ниже | Ветвится по `isAutoRename` |
+| `anchorRef` / `anchor` | Позиционирование popover'а у кнопки dots | Домер после открытия (нюанс web) |
+| `hoverHandlers` / `showDots` | Видимость кнопки dots (web: hover или открыт popover) | `showDots` учитывает `effectivePopover.open`, поэтому dots видны, пока открыт авто-rename |
+
+#### `handlePopoverClose` — ветвление по источнику открытия
+
+```ts
+const handlePopoverClose = useCallback(() => {
+  if (isAutoRename) {
+    // Авто-поток: закрыть popover = завершить сценарий.
+    // Локальный setPopover НЕ вызывается — он и так закрыт
+    // (сигнал погас → effectivePopover вернётся к локальному
+    //  состоянию, которое в авто-потоке никто не открывал).
+    consumePendingRename(chatId);
+    onRenameComplete?.(); // панель закрывается только здесь
+    return;
+  }
+
+  // Ручной поток: обычное закрытие локального состояния
+  setPopover(INITIAL_POPOVER);
+}, [isAutoRename, consumePendingRename, chatId, onRenameComplete]);
+```
+
+Ключевая асимметрия: в ручном потоке «закрыть» — это операция над локальным стейтом; в авто-потоке локальный стейт пуст (никто не звал `openPopover`), поэтому «закрыть» — это операция над **сигналом стора**. Гашение сигнала само по себе закрывает popover (производное состояние снова станет `{ open: false }`), а `onRenameComplete` — колбэк наверх (`ChatSidebar.hooks.handleRenameComplete` → `onClose` панели) — вызывается **только** в авто-потоке. Поэтому:
+
+- Save / Cancel / тап вне → `ChatItemPopover` зовёт `onClose` → `handlePopoverClose` → сигнал погашен, панель закрыта. Все три пути завершения сходятся в одну точку.
+- Обычный rename из меню (долгий тап по dots → Rename) идёт через `setMode("rename")` и закрывается веткой `setPopover(INITIAL_POPOVER)` — панель **не** закрывается, поведение списка не меняется.
+
+#### Нюанс web: домер якоря
+
+Якорь popover'а (`anchorRef` на кнопке dots) на web монтируется только вместе с открытым popover'ом. В авто-потоке popover открывается производным состоянием — кнопки dots ещё нет в DOM в момент первого рендера, поэтому `measure()` из `openPopover` вызвать некому. Решение — эффект домера:
+
+```ts
+useEffect(() => {
+  if (effectivePopover.open && !anchor) measure();
+}, [effectivePopover.open, anchor, measure]);
+```
+
+Пока якоря нет — домеряем на каждом рендере; как только появился (`anchor` стал не-null) — позиционирование выполнено, эффект больше не срабатывает. Без этого авто-rename popover рендерился бы с нулевыми координатами.
 
 ### TempChatButton
 
@@ -136,7 +197,7 @@ UI: `Pressable` 30×30, `rounded-full`, стили как у `ChatSidebarTrigger
   → ChatListItem рендерится → useChatPopover: pendingRenameChatId === id → mode = rename
   → Save/Cancel/outside → consumePendingRename(id) + onRenameComplete() → панель закрыта
 
-Тап «Временный чат»
+Т��п «Временный чат»
   → activeChatId === null ? setGlobalDraft("") : setActiveChat(null)
   → requestInputFocus() → focusInputToken++
   → ChatInputArea: токен изменился → inputRef.focus()
