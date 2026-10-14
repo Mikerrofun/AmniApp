@@ -1,5 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 
+import { EMBEDDING_DIMENSIONS } from '@/lib/ai/embeddings';
+
 import { DB_NAME, DB_SCHEMA_VERSION } from './db.config';
 import { setDbStatus } from './db-status';
 
@@ -47,7 +49,98 @@ async function migrate(db: SQLite.SQLiteDatabase): Promise<void> {
     }
   }
 
+  // v3: поиск по чатам — денормализованный context, FTS5-индекс
+  // (title + context) с триггерами синхронизации и векторная таблица
+  // sqlite-vec для embedding-поиска
+  if (current < 3) {
+    const columns = await db.getAllAsync<{ name: string }>(
+      'PRAGMA table_info(chats)',
+    );
+    const hasColumn = (name: string) =>
+      columns.some((column) => column.name === name);
+
+    if (!hasColumn('context')) {
+      await db.execAsync(
+        "ALTER TABLE chats ADD COLUMN context TEXT NOT NULL DEFAULT '';",
+      );
+    }
+    if (!hasColumn('title_embedding')) {
+      await db.execAsync(
+        'ALTER TABLE chats ADD COLUMN title_embedding TEXT;',
+      );
+    }
+    if (!hasColumn('context_embedding')) {
+      await db.execAsync(
+        'ALTER TABLE chats ADD COLUMN context_embedding TEXT;',
+      );
+    }
+
+    // FTS5-таблица обычная (не external-content): у chats нет
+    // rowid-совместимого INTEGER PRIMARY KEY, chat_id хранится
+    // UNINDEXED-колонкой, триггеры поддерживают индекс актуальным
+    await db.execAsync(`
+      CREATE VIRTUAL TABLE IF NOT EXISTS chats_fts USING fts5(
+        chat_id UNINDEXED,
+        title,
+        context
+      );
+
+      CREATE TRIGGER IF NOT EXISTS chats_ai AFTER INSERT ON chats BEGIN
+        INSERT INTO chats_fts (chat_id, title, context)
+        VALUES (new.id, new.title, new.context);
+      END;
+
+      CREATE TRIGGER IF NOT EXISTS chats_ad AFTER DELETE ON chats BEGIN
+        DELETE FROM chats_fts WHERE chat_id = old.id;
+      END;
+
+      CREATE TRIGGER IF NOT EXISTS chats_au
+        AFTER UPDATE OF title, context ON chats BEGIN
+        DELETE FROM chats_fts WHERE chat_id = old.id;
+        INSERT INTO chats_fts (chat_id, title, context)
+        VALUES (new.id, new.title, new.context);
+      END;
+
+      INSERT INTO chats_fts (chat_id, title, context)
+      SELECT id, title, context FROM chats
+      WHERE id NOT IN (SELECT chat_id FROM chats_fts);
+    `);
+
+    // Векторная таблица vec0 триггеров не поддерживает — синхронизация
+    // из репозитория (updateChatEmbedding / deleteChat). На платформах
+    // без расширения (web) создание тихо пропускается: embedding-поиск
+    // недоступен, keyword-поиск продолжает работать.
+    try {
+      await db.execAsync(`
+        CREATE VIRTUAL TABLE IF NOT EXISTS chats_vec USING vec0(
+          chat_id TEXT PRIMARY KEY,
+          title_embedding float[${EMBEDDING_DIMENSIONS}],
+          context_embedding float[${EMBEDDING_DIMENSIONS}]
+        );
+      `);
+    } catch {
+      // sqlite-vec недоступен — см. комментарий выше
+    }
+  }
+
   await db.execAsync(`PRAGMA user_version = ${DB_SCHEMA_VERSION}`);
+}
+
+/**
+ * Загружает bundled-расширение sqlite-vec до миграций: без него
+ * векторная таблица chats_vec не создастся. На платформах без
+ * поддержки расширений (web) тихо пропускается.
+ */
+async function loadVecExtension(db: SQLite.SQLiteDatabase): Promise<void> {
+  const extension = SQLite.bundledExtensions['sqlite-vec'];
+
+  if (!extension) return;
+
+  try {
+    await db.loadExtensionAsync(extension.libPath, extension.entryPoint);
+  } catch {
+    // Расширение не загрузилось — миграция создаст схему без chats_vec
+  }
 }
 
 /**
@@ -59,6 +152,7 @@ export function openDb(): Promise<SQLite.SQLiteDatabase> {
     dbPromise = (async () => {
       const db = await SQLite.openDatabaseAsync(DB_NAME);
       await db.execAsync('PRAGMA foreign_keys = ON;');
+      await loadVecExtension(db);
       await migrate(db);
       setDbStatus('ready');
 

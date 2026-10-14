@@ -8,3 +8,19 @@ export {
   groupChatsByDay,
   type ChatListSection,
 } from './lib/group-chats-by-day';
+export { useSearchStore } from './model/search-store';
+export type {
+  ChatSearchResult,
+  ChatSearchSource,
+  SearchState,
+  TitleMatchRange,
+  TitleSegment,
+} from './model/search-store.types';
+export { useChatSearch } from './model/use-chat-search';
+export { mergeSearchResults } from './lib/merge-search-results';
+export {
+  parseHighlightedTitle,
+  splitTitleByRanges,
+} from './lib/highlighted-title';
+export { cosineSimilarity } from './lib/cosine-similarity';
+export { updateTitleEmbedding } from './lib/update-title-embedding';

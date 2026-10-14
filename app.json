@@ -35,7 +35,13 @@
         }
       ],
       "expo-secure-store",
-      "expo-sqlite",
+      [
+        "expo-sqlite",
+        {
+          "enableFTS": true,
+          "withSQLiteVecExtension": true
+        }
+      ],
       "expo-localization"
     ],
     "experiments": {

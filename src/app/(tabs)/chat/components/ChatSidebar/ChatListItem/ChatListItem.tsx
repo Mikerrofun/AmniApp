@@ -1,6 +1,6 @@
 import { EllipsisVertical, Pin } from "lucide-react-native";
 import { useState } from "react";
-import { Platform, Pressable, View } from "react-native";
+import { Platform, Pressable, Text, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 
 import { usePopoverAnchor } from "@/shared/components/ui/PopoverMenu";
@@ -18,6 +18,7 @@ export function ChatListItem({
   onRename,
   onTogglePin,
   onDelete,
+  titleSegments,
 }: ChatListItemProps) {
   const t = useT();
   const { anchorRef, anchor, measure } = usePopoverAnchor();
@@ -63,7 +64,20 @@ export function ChatListItem({
             isActive && "font-semibold",
           )}
         >
-          {chat.title}
+          {titleSegments
+            ? titleSegments.map((segment, index) => (
+                <Text
+                  key={`${index}:${segment.text}`}
+                  style={
+                    segment.isMatch
+                      ? { color: colors.accent, fontWeight: "600" }
+                      : undefined
+                  }
+                >
+                  {segment.text}
+                </Text>
+              ))
+            : chat.title}
         </Animated.Text>
       </View>
 
