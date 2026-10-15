@@ -10,6 +10,7 @@
     "newChat": "New chat",
     "newChatDefaultTitle": "New chat",
     "newTempChat": "New temporary chat",
+    "alreadyInNewChat": "Already in a new chat",
     "empty": "No chats yet",
     "searchEmpty": "No results found",
     "pinned": "Pinned",

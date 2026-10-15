@@ -9,7 +9,7 @@ import { useTempChatButton } from "./useTempChatButton";
 
 /** Размер совпадает с триггером панели */
 const BUTTON_SIZE = 38;
-const ICON_SIZE = 18;
+const ICON_SIZE = 16;
 
 /**
  * Кнопка временного чата: круглая, зеркальна триггеру панели.
