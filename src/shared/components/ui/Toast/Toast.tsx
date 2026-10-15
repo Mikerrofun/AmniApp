@@ -4,20 +4,13 @@ import Animated, { FadeInDown, FadeOut } from "react-native-reanimated";
 
 import { useToastStore } from "./toast-store";
 
-const AUTO_HIDE_MS = 2000;
+const AUTO_HIDE_MS = 1500;
 
-/**
- * Универсальный тост: серый скругленный контейнер с белым текстом
- * по центру экрана. Монтируется один раз на экране, триггер —
- * showToast(text) из toast-store. Не перехватывает касания.
- */
 export function Toast() {
   const message = useToastStore((state) => state.message);
   const toastKey = useToastStore((state) => state.toastKey);
   const clear = useToastStore((state) => state.clear);
 
-  // Автоскрытие; toastKey в зависимостях перезапускает таймер,
-  // если тост вызвали повторно до истечения предыдущего
   useEffect(() => {
     if (message === null) return;
 
