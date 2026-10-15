@@ -294,3 +294,18 @@ const thumbStyle = useAnimatedStyle(() => {
 ```
 
 Замечание: reanimated 4.5.1 не экспортирует `Animated.SectionList`, а `Animated.FlatList` не принимает `scrollHandler` — поэтому подписка через обычный `onScroll` с записью в shared value, а не `useAnimatedScrollHandler`. Отрисовка всё равно на UI-потоке, рывков нет.
+
+**Скачок тумбы при смене фильтра.** Список чатов перемонтируется при смене сортировки/pin'ов (`key={all-chats:${sortDirection}:${pinnedCount}}`) и при переключении в поиск. Перемонтированный список встаёт наверх **без scroll-события** (мы уже на 0 — событие не приходит), поэтому stale `offsetY` никогда не исправляется сам: тумба прыгала вниз по старому смещению и дёргалась обратно. Фикс — явный сброс синхронно с перемонтированием:
+
+```ts
+// в useScrollIndicator: сброс смещения и контента
+const resetScroll = useCallback(() => {
+  offsetY.value = 0;      // список встал наверх — и тумба тоже
+  contentHeight.value = 0; // до прихода нового contentSize тумба не мигает
+}, []);
+
+// в ChatSidebar: эффект следит за key списка и переключением поиска
+useEffect(() => {
+  scroll.resetScroll();
+}, [listKey, isSearchActive, scroll.resetScroll]);
+```

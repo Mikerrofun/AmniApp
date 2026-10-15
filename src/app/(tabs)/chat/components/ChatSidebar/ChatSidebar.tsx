@@ -71,6 +71,16 @@ function SidebarContent({
   useSearchResetOnClose(isOpen, resetSearch);
 
   const { sections, pinnedCount } = useChatSections(chats, sortDirection);
+
+  // Список перемонтируется при смене сортировки/pin'ов (key ниже) и
+  // при переключении в поиск — сбрасываем индикатор синхронно, иначе
+  // тумба прыгает по stale-смещению до первого scroll-события.
+  // resetScroll стабилен (useCallback в хуке)
+  const listKey = `all-chats:${sortDirection}:${pinnedCount}`;
+  const { resetScroll } = scroll;
+  useEffect(() => {
+    resetScroll();
+  }, [listKey, isSearchActive, resetScroll]);
   const {
     handleSelectChat,
     handleCreateChat,

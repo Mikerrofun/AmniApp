@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import type { LayoutChangeEvent, NativeSyntheticEvent } from "react-native";
 import { useAnimatedStyle, useSharedValue } from "react-native-reanimated";
 
@@ -60,6 +61,20 @@ export function useScrollIndicator(options: UseScrollIndicatorOptions = {}) {
     }
   };
 
+  // Сброс при пересоздании списка (смена сортировки/фильтра, поиск):
+  // список перемонтируется и встает наверх БЕЗ scroll-события, поэтому
+  // stale offsetY никогда не исправится сам — тумба прыгала вниз и
+  // дергалась обратно. Сбрасываем и контент, чтобы до прихода нового
+  // contentSize тумба не мигала в неправильной позиции.
+  // Shared values reanimated стабильны между рендерами — пустые deps
+  // корректны; в deps их нельзя: react-hooks/immutability запрещает
+  // мутировать «реактивные» значения внутри колбэка
+  const resetScroll = useCallback(() => {
+    offsetY.value = 0;
+    contentHeight.value = 0;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const thumbStyle = useAnimatedStyle(() => {
     const isOverflow =
       contentHeight.value > viewportHeight.value + OVERFLOW_EPSILON;
@@ -97,5 +112,6 @@ export function useScrollIndicator(options: UseScrollIndicatorOptions = {}) {
     onScroll,
     onContentSizeChange,
     onLayout,
+    resetScroll,
   };
 }
