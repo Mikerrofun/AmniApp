@@ -36,7 +36,8 @@ export function useSwitchGlobalHook(value: string) {
       width.value = withTiming(layout.width, TIMING);
       height.value = withTiming(layout.height, TIMING);
     },
-    [value, left, width, height],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Reanimated shared values are stable
+    [value],
   );
 
   const onItemLayout = useCallback(

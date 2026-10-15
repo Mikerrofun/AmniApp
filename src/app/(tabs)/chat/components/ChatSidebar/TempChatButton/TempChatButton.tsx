@@ -8,7 +8,7 @@ import type { TempChatButtonProps } from "./TempChatButton.types";
 import { useTempChatButton } from "./useTempChatButton";
 
 /** Размер совпадает с триггером панели */
-const BUTTON_SIZE = 38;
+const BUTTON_SIZE = 32;
 const ICON_SIZE = 16;
 
 /**
