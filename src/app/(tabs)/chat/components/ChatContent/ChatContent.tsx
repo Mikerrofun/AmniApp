@@ -1,5 +1,10 @@
 import { useRef } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import {
+  Animated as RNAnimated,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import Animated, { FadeInDown, FadeOut } from "react-native-reanimated";
 
 import { useChatsStore } from "@/features/chats";
@@ -29,7 +34,11 @@ export function ChatContent({ topInset }: ChatContentProps) {
   );
 
   return (
-    <Animated.View
+    // RN Animated.View (не reanimated!): только он принимает
+    // Animated.Value инсета клавиатуры в style. Reanimated-овский
+    // Animated.View замораживает объекты стилей, и RN Animated падает
+    // с «Cannot add new property '_tracking'» при анимации клавиатуры.
+    <RNAnimated.View
       className="flex-1"
       style={{ paddingTop: topInset, paddingBottom: keyboardInset }}
     >
@@ -78,6 +87,6 @@ export function ChatContent({ topInset }: ChatContentProps) {
       <View ref={inputRef}>
         <ChatInputArea chatId={activeChat?.id ?? null} />
       </View>
-    </Animated.View>
+    </RNAnimated.View>
   );
 }

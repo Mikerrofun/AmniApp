@@ -1,7 +1,9 @@
-// React Compiler мемоизирует Animated.Value из useState и делает его
-// non-extensible — RN Animated падает с «Cannot add new property
-// '_tracking'» при первом же Animated.timing. Отключаем мемоизацию
-// для этого файла целиком: он крошечный, мемоизация ничего не дает.
+// Дополнительная защита от React Compiler: он может мемоизировать
+// Animated.Value и сделать его non-extensible, тогда RN Animated
+// падает с «Cannot add new property '_tracking'». Основная причина
+// той ошибки была в другом — Animated.Value нельзя отдавать в стили
+// reanimated-овского Animated.View (см. ChatContent.tsx), но директива
+// оставлена как страховка: файл крошечный, мемоизация ничего не дает.
 'use no memo';
 
 import { useEffect, useState, type RefObject } from 'react';
