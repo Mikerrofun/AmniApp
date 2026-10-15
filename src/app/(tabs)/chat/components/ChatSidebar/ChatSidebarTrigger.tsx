@@ -6,7 +6,7 @@ import { useT } from '@/shared/i18n';
 import type { ChatSidebarTriggerProps } from './ChatSidebar.types';
 
 /** Размер кнопки одинаков на всех платформах */
-const TRIGGER_SIZE = 30;
+const TRIGGER_SIZE = 38;
 
 /**
  * Кнопка вызова панели: пустой закруглённый квадрат сероватого оттенка.
