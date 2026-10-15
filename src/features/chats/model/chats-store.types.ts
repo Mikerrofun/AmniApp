@@ -16,6 +16,20 @@ export type ChatsState = {
    */
   focusChatId: string | null;
   /**
+   * Счетчик запросов фокуса поля ввода временного чата. Инкрементится
+   * при каждом requestInputFocus; ChatInputArea фокусится при изменении.
+   * Отдельный сигнал (вместо расширения focusChatId сентинелом), чтобы
+   * не грязнить семантику существующего механизма фокуса по id чата.
+   */
+  focusInputToken: number;
+  /**
+   * Чат, который нужно переименовать сразу после создания (кнопка
+   * «Новый чат»): ChatListItem сравнивает свой id с сигналом и
+   * открывает popover в режиме rename. Одноразовый, переживает
+   * рендер списка.
+   */
+  pendingRenameChatId: string | null;
+  /**
    * Черновики в памяти (сессионное состояние, аналог sessionStorage):
    * переживают переключение чатов и вкладок, стираются при рестарте.
    */
@@ -33,4 +47,6 @@ export type ChatsState = {
   setActiveChat: (id: string | null) => void;
   setSortDirection: (direction: SortDirection) => void;
   consumeFocusChat: (id: string) => void;
+  requestInputFocus: () => void;
+  consumePendingRename: (id: string) => void;
 };

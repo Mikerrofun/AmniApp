@@ -71,8 +71,22 @@ function SidebarContent({
   useSearchResetOnClose(isOpen, resetSearch);
 
   const { sections, pinnedCount } = useChatSections(chats, sortDirection);
-  const { handleSelectChat, handleCreateChat, handleToggleSort } =
-    useSidebarHandlers(onClose, resetSearch);
+
+  // Список перемонтируется при смене сортировки/pin'ов (key ниже) и
+  // при переключении в поиск — сбрасываем индикатор синхронно, иначе
+  // тумба прыгает по stale-смещению до первого scroll-события.
+  // resetScroll стабилен (useCallback в хуке)
+  const listKey = `all-chats:${sortDirection}:${pinnedCount}`;
+  const { resetScroll } = scroll;
+  useEffect(() => {
+    resetScroll();
+  }, [listKey, isSearchActive, resetScroll]);
+  const {
+    handleSelectChat,
+    handleCreateChat,
+    handleRenameComplete,
+    handleToggleSort,
+  } = useSidebarHandlers(onClose, resetSearch);
 
   return (
     <View
@@ -158,6 +172,7 @@ function SidebarContent({
                     isActive={item.id === activeChatId}
                     onSelect={handleSelectChat}
                     onRename={renameChat}
+                    onRenameComplete={handleRenameComplete}
                     onTogglePin={togglePin}
                     onDelete={deleteChat}
                   />
@@ -212,6 +227,7 @@ function SidebarContent({
                     isActive={item.chat.id === activeChatId}
                     onSelect={handleSelectChat}
                     onRename={renameChat}
+                    onRenameComplete={handleRenameComplete}
                     onTogglePin={togglePin}
                     onDelete={deleteChat}
                     titleSegments={splitTitleByRanges(
@@ -244,9 +260,7 @@ function SidebarContent({
 
         {/* Тонкий индикатор прокрутки справа, когда чатов много */}
         <ScrollIndicator
-          isVisible={scroll.isVisible}
-          thumbHeight={scroll.thumbHeight}
-          thumbTop={scroll.thumbTop}
+          style={scroll.thumbStyle}
           side="right"
           inset={-6}
         />

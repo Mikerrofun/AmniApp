@@ -1,5 +1,5 @@
-import type { TitleSegment } from '@/features/chats';
-import type { ChatRecord } from '@/types/chat';
+import type { TitleSegment } from "@/features/chats";
+import type { ChatRecord } from "@/types/chat";
 
 export type ChatListItemProps = {
   chat: ChatRecord;
@@ -7,6 +7,7 @@ export type ChatListItemProps = {
   isActive: boolean;
   onSelect: (id: string) => void;
   onRename: (id: string, title: string) => void;
+  onRenameComplete?: () => void;
   onTogglePin: (chat: ChatRecord) => void;
   onDelete: (id: string) => void;
   /**
@@ -17,4 +18,4 @@ export type ChatListItemProps = {
 };
 
 /** Режим содержимого popover'а чата */
-export type ChatPopoverMode = 'menu' | 'rename' | 'delete';
+export type ChatPopoverMode = "menu" | "rename" | "delete";

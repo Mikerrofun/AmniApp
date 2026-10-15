@@ -2,7 +2,7 @@ import { Text, View } from "react-native";
 
 import { useT } from "@/shared/i18n";
 
-import { ChatSidebar, ChatSidebarTrigger } from "../ChatSidebar";
+import { ChatSidebar, ChatSidebarTrigger, TempChatButton } from "../ChatSidebar";
 
 import type { SidebarHandlerProps } from "./SidebarHandler.types";
 
@@ -49,6 +49,21 @@ export function SidebarHandler({
         }}
       >
         <ChatSidebarTrigger isOpen={isOpen} onPress={onToggle} />
+      </View>
+
+      {/* Кнопка временного чата: зеркально триггеру справа.
+          zIndex ниже затемнения (40) — при открытой панели тап
+          попадает в бэкдроп и просто закрывает панель */}
+      <View
+        pointerEvents="box-none"
+        style={{
+          position: "absolute",
+          right: 16,
+          top: topInset + 12,
+          zIndex: 30,
+        }}
+      >
+        <TempChatButton onCloseSidebar={isDesktop ? undefined : onClose} />
       </View>
 
       {/* Заголовок "Chats" - показывается только когда sidebar открыт */}

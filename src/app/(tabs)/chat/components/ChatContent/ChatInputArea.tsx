@@ -26,17 +26,26 @@ export function ChatInputArea({ chatId }: ChatInputAreaProps) {
   const inputRef = useRef<TextInput>(null);
   const focusChatId = useChatsStore((state) => state.focusChatId);
   const consumeFocusChat = useChatsStore((state) => state.consumeFocusChat);
+  const focusInputToken = useChatsStore((state) => state.focusInputToken);
+  const lastFocusTokenRef = useRef(focusInputToken);
 
   const scroll = useScrollIndicator({ verticalPadding: 4 });
 
-  // Фокус после создания чата (флаг снимается, чтобы не фокусить
-  // при обычном переключении чатов)
+  // Фокус после создания чата
   useEffect(() => {
     if (chatId !== null && focusChatId === chatId) {
       consumeFocusChat(chatId);
       inputRef.current?.focus();
     }
   }, [focusChatId, chatId, consumeFocusChat]);
+
+  // Фокус поля временного чата
+  useEffect(() => {
+    if (focusInputToken === lastFocusTokenRef.current) return;
+
+    lastFocusTokenRef.current = focusInputToken;
+    inputRef.current?.focus();
+  }, [focusInputToken]);
 
   return (
     <View className="px-4 pb-3">
@@ -65,13 +74,7 @@ export function ChatInputArea({ chatId }: ChatInputAreaProps) {
             className="w-full text-sm text-text-primary"
           />
           {/* Индикатор прокрутки слева: видно, сколько текста скрыто */}
-          <ScrollIndicator
-            isVisible={scroll.isVisible}
-            thumbHeight={scroll.thumbHeight}
-            thumbTop={scroll.thumbTop}
-            side="left"
-            inset={1}
-          />
+          <ScrollIndicator style={scroll.thumbStyle} side="left" inset={1} />
         </View>
         <View className="h-9 w-9 items-center justify-center rounded-3xl bg-white/5">
           <Pressable

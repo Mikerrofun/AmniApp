@@ -14,6 +14,8 @@ export const useChatsStore = create<ChatsState>((set) => ({
   sortDirection: 'newest',
   isLoading: false,
   focusChatId: null,
+  focusInputToken: 0,
+  pendingRenameChatId: null,
   drafts: {},
   globalDraft: '',
 
@@ -35,6 +37,8 @@ export const useChatsStore = create<ChatsState>((set) => ({
       chats: [chat, ...state.chats],
       activeChatId: chat.id,
       focusChatId: chat.id,
+      // Сигнал авто-rename: новый чат сразу открывается в режиме rename
+      pendingRenameChatId: chat.id,
       // Черновик временного чата переезжать в новый чат не должен:
       // временный чат после создания реального недоступен
       globalDraft: '',
@@ -65,6 +69,11 @@ export const useChatsStore = create<ChatsState>((set) => ({
         drafts,
         activeChatId:
           state.activeChatId === id ? null : state.activeChatId,
+        // Гигиена: не оставлять сигнал авто-rename на удаленный чат
+        pendingRenameChatId:
+          state.pendingRenameChatId === id
+            ? null
+            : state.pendingRenameChatId,
       };
     });
   },
@@ -100,4 +109,12 @@ export const useChatsStore = create<ChatsState>((set) => ({
 
   consumeFocusChat: (id) =>
     set((state) => (state.focusChatId === id ? { focusChatId: null } : state)),
+
+  requestInputFocus: () =>
+    set((state) => ({ focusInputToken: state.focusInputToken + 1 })),
+
+  consumePendingRename: (id) =>
+    set((state) =>
+      state.pendingRenameChatId === id ? { pendingRenameChatId: null } : state,
+    ),
 }));

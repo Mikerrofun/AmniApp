@@ -90,14 +90,24 @@ export function useSidebarHandlers(
     [setActiveChat, resetSearch, onClose],
   );
 
+  // Панель не закрываем: новый чат сразу открывается в режиме rename,
+  // закрытие происходит по завершении rename (handleRenameComplete)
   const handleCreateChat = useCallback(async () => {
     await createChat();
+  }, [createChat]);
+
+  const handleRenameComplete = useCallback(() => {
     onClose?.();
-  }, [createChat, onClose]);
+  }, [onClose]);
 
   const handleToggleSort = useCallback(() => {
     setSortDirection(sortDirection === "newest" ? "oldest" : "newest");
   }, [sortDirection, setSortDirection]);
 
-  return { handleSelectChat, handleCreateChat, handleToggleSort };
+  return {
+    handleSelectChat,
+    handleCreateChat,
+    handleRenameComplete,
+    handleToggleSort,
+  };
 }

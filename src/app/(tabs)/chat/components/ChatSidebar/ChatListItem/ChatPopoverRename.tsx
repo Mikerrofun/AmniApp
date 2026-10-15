@@ -20,9 +20,15 @@ export function ChatPopoverRename({
   const [renameText, setRenameText] = useState(chat.title);
 
   const canSave = renameText.trim().length > 0;
+  // Название не изменилось — Save ничего не перезаписывает:
+  // ни title в БД, ни title_embedding (он генерируется только при rename)
+  const isUnchanged = renameText.trim() === chat.title;
 
   const handleSave = () => {
-    if (!canSave) return;
+    if (!canSave || isUnchanged) {
+      close();
+      return;
+    }
     onRename(chat.id, renameText.trim());
     close();
   };

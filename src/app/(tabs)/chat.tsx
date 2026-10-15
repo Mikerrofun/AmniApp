@@ -1,6 +1,8 @@
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { Toast } from "@/shared/components/ui/Toast";
+
 import { ChatContent } from "./chat/components/ChatContent";
 import { useChatSidebar } from "./chat/components/ChatSidebar";
 import { SidebarHandler } from "./chat/components/SidebarHandler";
@@ -20,6 +22,7 @@ export default function ChatScreen() {
         sidebarWidth={sidebar.sidebarWidth}
         topInset={insets.top}
       />
+      <Toast />
     </View>
   );
 }

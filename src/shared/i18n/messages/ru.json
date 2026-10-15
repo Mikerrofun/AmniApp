@@ -9,6 +9,8 @@
     "searchPlaceholder": "Поиск по чатам",
     "newChat": "Новый чат",
     "newChatDefaultTitle": "Новый чат",
+    "newTempChat": "Новый временный чат",
+    "alreadyInNewChat": "Вы уже в новом чате",
     "empty": "Здесь пока нет чатов",
     "searchEmpty": "Ничего не найдено",
     "pinned": "Закрепленные",
