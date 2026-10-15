@@ -1,4 +1,7 @@
 import { useCallback } from "react";
+import { Platform } from "react-native";
+
+import * as Haptics from "expo-haptics";
 
 import { useChatsStore } from "@/features/chats";
 
@@ -14,6 +17,11 @@ export function useTempChatButton(onCloseSidebar?: () => void) {
   const requestInputFocus = useChatsStore((state) => state.requestInputFocus);
 
   const handlePress = useCallback(() => {
+    // Легкий тактильный отклик; на web haptics недоступны
+    if (Platform.OS !== "web") {
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+
     if (activeChatId === null) {
       // Уже во временном чате — стираем глобальный драфт
       setGlobalDraft("");

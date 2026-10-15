@@ -1,5 +1,6 @@
 import { useRef } from "react";
-import { Animated, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import Animated, { FadeInDown, FadeOut } from "react-native-reanimated";
 
 import { useChatsStore } from "@/features/chats";
 import { useT } from "@/shared/i18n";
@@ -33,30 +34,45 @@ export function ChatContent({ topInset }: ChatContentProps) {
       style={{ paddingTop: topInset, paddingBottom: keyboardInset }}
     >
       <View className="flex-1">
-        {activeChat ? (
-          <>
-            <View className="flex-row items-center px-4" style={{ height: 54 }}>
-              <View style={{ width: 54 }} />
-              <Text
-                numberOfLines={1}
-                className="flex-1 text-center text-base font-semibold text-text-primary"
+        {/* Cross-fade при смене активного чата (чат <-> временный и
+            чат <-> чат): старый слой гаснет, новый приезжает сверху
+            с легким сдвигом. Слои absolute — перекрываются во время
+            перехода, а не выталкивают друг друга из layout. */}
+        <Animated.View
+          key={activeChat?.id ?? "temp"}
+          entering={FadeInDown.duration(200).delay(80)}
+          exiting={FadeOut.duration(150)}
+          className="flex-1"
+          style={StyleSheet.absoluteFill}
+        >
+          {activeChat ? (
+            <>
+              <View
+                className="flex-row items-center px-4"
+                style={{ height: 54 }}
               >
-                {activeChat.title}
+                <View style={{ width: 54 }} />
+                <Text
+                  numberOfLines={1}
+                  className="flex-1 text-center text-base font-semibold text-text-primary"
+                >
+                  {activeChat.title}
+                </Text>
+                <View style={{ width: 54 }} />
+              </View>
+              {/* TODO: здесь будет список сообщений активного чата */}
+            </>
+          ) : (
+            <View className="flex-1 items-center justify-center px-6">
+              <Text className="text-center text-2xl text-text-primary">
+                {t("chatInput.emptyTitle")}
               </Text>
-              <View style={{ width: 54 }} />
+              <Text className="pt-2 text-center text-sm text-text-muted">
+                {t("chatInput.subtitle")}
+              </Text>
             </View>
-            {/* TODO: здесь будет список сообщений активного чата */}
-          </>
-        ) : (
-          <View className="flex-1 items-center justify-center px-6">
-            <Text className="text-center text-2xl text-text-primary">
-              {t("chatInput.emptyTitle")}
-            </Text>
-            <Text className="pt-2 text-center text-sm text-text-muted">
-              {t("chatInput.subtitle")}
-            </Text>
-          </View>
-        )}
+          )}
+        </Animated.View>
       </View>
 
       <View ref={inputRef}>

@@ -69,6 +69,11 @@ export const useChatsStore = create<ChatsState>((set) => ({
         drafts,
         activeChatId:
           state.activeChatId === id ? null : state.activeChatId,
+        // Гигиена: не оставлять сигнал авто-rename на удаленный чат
+        pendingRenameChatId:
+          state.pendingRenameChatId === id
+            ? null
+            : state.pendingRenameChatId,
       };
     });
   },
