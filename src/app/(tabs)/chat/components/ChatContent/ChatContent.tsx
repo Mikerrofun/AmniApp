@@ -1,10 +1,5 @@
 import { useRef } from "react";
-import {
-  Animated as RNAnimated,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Animated as RNAnimated, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeInDown, FadeOut } from "react-native-reanimated";
 
 import { useChatsStore } from "@/features/chats";
@@ -34,19 +29,11 @@ export function ChatContent({ topInset }: ChatContentProps) {
   );
 
   return (
-    // RN Animated.View (не reanimated!): только он принимает
-    // Animated.Value инсета клавиатуры в style. Reanimated-овский
-    // Animated.View замораживает объекты стилей, и RN Animated падает
-    // с «Cannot add new property '_tracking'» при анимации клавиатуры.
     <RNAnimated.View
       className="flex-1"
       style={{ paddingTop: topInset, paddingBottom: keyboardInset }}
     >
       <View className="flex-1">
-        {/* Cross-fade при смене активного чата (чат <-> временный и
-            чат <-> чат): старый слой гаснет, новый приезжает сверху
-            с легким сдвигом. Слои absolute — перекрываются во время
-            перехода, а не выталкивают друг друга из layout. */}
         <Animated.View
           key={activeChat?.id ?? "temp"}
           entering={FadeInDown.duration(200).delay(80)}

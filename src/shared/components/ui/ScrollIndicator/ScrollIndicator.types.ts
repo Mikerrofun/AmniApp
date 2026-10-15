@@ -1,6 +1,6 @@
-import type { StyleProps } from 'react-native-reanimated';
+import type { StyleProps } from "react-native-reanimated";
 
-export type ScrollIndicatorSide = 'left' | 'right';
+export type ScrollIndicatorSide = "left" | "right";
 
 export type ScrollIndicatorProps = {
   /**
@@ -12,4 +12,17 @@ export type ScrollIndicatorProps = {
   side?: ScrollIndicatorSide;
   /** Отступ полоски от края контейнера */
   inset?: number;
+};
+
+export type ScrollMetrics = {
+  contentOffset: { y: number };
+  contentSize?: { height?: number };
+};
+
+export type ContentSizeEvent = {
+  nativeEvent: { contentSize: { width: number; height: number } };
+};
+
+export type UseScrollIndicatorOptions = {
+  verticalPadding?: number;
 };
