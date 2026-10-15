@@ -1,36 +1,35 @@
-import { View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { THUMB_COLOR, THUMB_WIDTH } from './ScrollIndicator.config';
 import type { ScrollIndicatorProps } from './ScrollIndicator.types';
 
 /**
- * Тонкая закругленная полоска-индикатор прокрутки. Рендерится только
- * когда контент не влезает во вьюпорт. Абсолютное позиционирование —
- * размещать внутри relative-контейнера прокручиваемого элемента.
+ * Тонкая закругленная полоска-индикатор прокрутки. Позиция/высота/
+ * видимость приходят анимированным стилем из useScrollIndicator
+ * (shared values, UI-поток) — компонент не ре-рендерится при скролле.
+ * Абсолютное позиционирование — размещать внутри relative-контейнера
+ * прокручиваемого элемента.
  */
 export function ScrollIndicator({
-  isVisible,
-  thumbHeight,
-  thumbTop,
+  style,
   side = 'right',
   inset = 2,
 }: ScrollIndicatorProps) {
-  if (!isVisible || thumbHeight <= 0) return null;
-
   return (
-    <View
+    <Animated.View
       pointerEvents="none"
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
-      style={{
-        position: 'absolute',
-        [side]: inset,
-        top: thumbTop,
-        width: THUMB_WIDTH,
-        height: thumbHeight,
-        borderRadius: THUMB_WIDTH / 2,
-        backgroundColor: THUMB_COLOR,
-      }}
+      style={[
+        {
+          position: 'absolute',
+          [side]: inset,
+          width: THUMB_WIDTH,
+          borderRadius: THUMB_WIDTH / 2,
+          backgroundColor: THUMB_COLOR,
+        },
+        style,
+      ]}
     />
   );
 }

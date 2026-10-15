@@ -74,13 +74,7 @@ export function ChatInputArea({ chatId }: ChatInputAreaProps) {
             className="w-full text-sm text-text-primary"
           />
           {/* Индикатор прокрутки слева: видно, сколько текста скрыто */}
-          <ScrollIndicator
-            isVisible={scroll.isVisible}
-            thumbHeight={scroll.thumbHeight}
-            thumbTop={scroll.thumbTop}
-            side="left"
-            inset={1}
-          />
+          <ScrollIndicator style={scroll.thumbStyle} side="left" inset={1} />
         </View>
         <View className="h-9 w-9 items-center justify-center rounded-3xl bg-white/5">
           <Pressable

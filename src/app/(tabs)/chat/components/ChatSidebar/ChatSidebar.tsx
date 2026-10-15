@@ -250,9 +250,7 @@ function SidebarContent({
 
         {/* Тонкий индикатор прокрутки справа, когда чатов много */}
         <ScrollIndicator
-          isVisible={scroll.isVisible}
-          thumbHeight={scroll.thumbHeight}
-          thumbTop={scroll.thumbTop}
+          style={scroll.thumbStyle}
           side="right"
           inset={-6}
         />

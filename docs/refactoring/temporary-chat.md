@@ -138,7 +138,7 @@ const handlePress = useCallback(() => {
 
 **Флоу.**
 1. «Новый чат» → `createChat()` пишет в БД и ставит в стор `pendingRenameChatId = <id>`. Панель **не** закрывается.
-2. Новый элемент появляется в `FlatList` асинхронно — позже самого сигнала. Сигнал лежит в сторе и «догоняет» элемент: когда тот смонтируется, первое же сравнение даёт совпадение.
+2. Новый элемент появляется в `FlatList` асинхронно — позже самого сигнала. Сигнал лежит в сторе и «догоняет» э��емент: когда тот смонтируется, первое же сравнение даёт совпадение.
 3. `ChatListItem` → `useChatPopover(chatId, onRenameComplete)`: `pendingRenameChatId === chatId` — производное состояние, без эффектов. Совпало → popover рендерится сразу открытым в режиме rename.
 4. Save / Cancel / тап вне → `handlePopoverClose`: сигнал гасится (`consumePendingRename(id)`), вызывается `onRenameComplete` → панель закрывается. Все три пути завершения сходятся в одну точку.
 5. Обычный rename через меню dots идёт мимо: сигнал не выставляется, панель не закрывается.
@@ -225,18 +225,72 @@ useEffect(() => {
 
 ## 10. Фикс «Cannot add new property '_tracking'»
 
-**Что делает.** `useKeyboardInset.ts` создаёт `Animated.Value` через `useState(() => new Animated.Value(0))`. React Compiler (включён в проекте) мемоизирует это значение и делает объект non-extensible — RN Animated при первом же `Animated.timing` пытается навесить внутреннее свойство `_tracking` и падает.
+**Что делает.** Инсет клавиатуры — это `Animated.Value` из **react-native**, и он должен попадать только в `Animated.View` тоже из react-native. Когда добавлялся cross-fade, импорт `Animated` в `ChatContent` незаметно поменялся на reanimated — и внешний контейнер стал reanimated-овским. Reanimated не поддерживает RN `Animated.Value` в стилях: объект инсета оказывается замороженным, и при первом же `Animated.timing` (показ клавиатуры) RN Animated падает с «Cannot add new property '_tracking'».
 
 **Флоу.**
-1. Экран чата монтируется → компилятор закешировал `Animated.Value`.
+1. `ChatContent` рендерится с reanimated-контейнером, в style передан RN `Animated.Value` инсета.
 2. Пользователь открывает клавиатуру → `Keyboard.addListener` → `Animated.timing(inset, ...).start()` → внутри `track()` присваивает `this._tracking` → throw.
 
-**Код** — escape-hatch компилятора в начале файла:
+**Код** — два независимых Animated в одном файле:
+
+```tsx
+import { Animated as RNAnimated } from "react-native";           // для инсета
+import Animated, { FadeInDown, FadeOut } from "react-native-reanimated"; // для cross-fade
+
+// Внешний контейнер — RN Animated.View (принимает Animated.Value в style)
+<RNAnimated.View style={{ paddingBottom: keyboardInset }}>
+  {/* Внутренний слой — reanimated, cross-fade */}
+  <Animated.View key={activeChat?.id ?? "temp"} entering={FadeInDown.duration(200)}>
+    ...
+  </Animated.View>
+</RNAnimated.View>
+```
+
+Директива `'use no memo'` в `useKeyboardInset.ts` оставлена как страховка от React Compiler (он тоже может заморозить `Animated.Value`), но реальная причина была в смешивании библиотек.
+
+## 11. Плавный ScrollIndicator (без ре-рендеров при скролле)
+
+**Что делает.** Раньше каждый scroll-событие делало `setOffsetY` → ре-рендер всего `SidebarContent` (тяжёлый компонент со списками) → тумба двигалась рывками и отставала от прокрутки. Теперь смещение/размеры живут в reanimated shared values, позиция тумбы считается в worklet'е на UI-потоке — скролл не вызывает ни одного ре-рендера.
+
+**Флоу.**
+1. Скролл → `onScroll` пишет `offsetY.value` (JS-поток, throttle 16ms) — React не узнаёт об этом вообще.
+2. `useAnimatedStyle` на UI-потоке пересчитывает `top`/`height`/`opacity` тумбы из shared values.
+3. `ScrollIndicator` рендерит `Animated.View` с этим стилем — компонент статичен, ре-рендерится только при смене layout.
+
+**Код** — хук:
 
 ```ts
-// React Compiler мемоизирует Animated.Value из useState и делает его
-// non-extensible — RN Animated падает с «Cannot add new property
-// '_tracking'» при первом же Animated.timing. Отключаем мемоизацию
-// для этого файла целиком: он крошечный, мемоизация ничего не дает.
-'use no memo';
+const offsetY = useSharedValue(0);
+const viewportHeight = useSharedValue(0);
+const contentHeight = useSharedValue(0);
+
+// обычный колбэк (работает и для SectionList/FlatList, и для TextInput,
+// которым reanimated-обработчик не передать) — пишет в shared value
+const onScroll = (event) => {
+  offsetY.value = event.nativeEvent.contentOffset.y;
+};
+
+// позиция тумбы — worklet на UI-потоке, без React
+const thumbStyle = useAnimatedStyle(() => {
+  const isOverflow = contentHeight.value > viewportHeight.value + OVERFLOW_EPSILON;
+  const progress = Math.min(1, Math.max(0, offsetY.value / maxScroll));
+  return {
+    opacity: isOverflow ? 1 : 0,
+    top: verticalPadding + progress * (trackHeight - thumbHeight),
+    height: thumbHeight,
+  };
+});
 ```
+
+Компонент и потребители:
+
+```tsx
+// ScrollIndicator: статичный Animated.View, стиль приходит анимированным
+<ScrollIndicator style={scroll.thumbStyle} side="right" inset={-6} />
+
+// ChatSidebar: списки остались обычными (SectionList/FlatList),
+// изменился только источник стиля у индикатора
+<ScrollIndicator style={scroll.thumbStyle} ... />
+```
+
+Замечание: reanimated 4.5.1 не экспортирует `Animated.SectionList`, а `Animated.FlatList` не принимает `scrollHandler` — поэтому подписка через обычный `onScroll` с записью в shared value, а не `useAnimatedScrollHandler`. Отрисовка всё равно на UI-потоке, рывков нет.

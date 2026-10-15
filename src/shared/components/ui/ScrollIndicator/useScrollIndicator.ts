@@ -1,5 +1,5 @@
-import { useCallback, useState } from "react";
 import type { LayoutChangeEvent, NativeSyntheticEvent } from "react-native";
+import { useAnimatedStyle, useSharedValue } from "react-native-reanimated";
 
 import { OVERFLOW_EPSILON, THUMB_MIN_HEIGHT } from "./ScrollIndicator.config";
 
@@ -18,63 +18,82 @@ type UseScrollIndicatorOptions = {
 };
 
 /**
- * Математика тонкого индикатора прокрутки: по размеру вьюпорта,
- * высоте контента и смещению считает видимость, высоту и позицию
- * «тумбы». Подходит и для TextInput (onScroll/onContentSizeChange),
- * и для списков (SectionList/FlatList/ScrollView).
+ * Математика тонкого индикатора прокрутки на reanimated shared values:
+ * смещение/размеры живут вне React-состояния, позиция тумбы считается
+ * в worklet'е на UI-потоке. Скролл не вызывает ни одного ре-рендера —
+ * индикатор движется синхронно с прокруткой без рывков.
+ *
+ * Подписка — обычный onScroll (работает одинаково для SectionList,
+ * FlatList и TextInput, которым reanimated-обработчик не передать):
+ * колбэк пишет в shared value из JS-потока, отрисовка тумбы идет
+ * на UI-потоке. Колбэки намеренно не мемоизированы: компонент больше
+ * не ре-рендерится при скролле, пересоздавать нечего.
  */
 export function useScrollIndicator(options: UseScrollIndicatorOptions = {}) {
   const { verticalPadding = 4 } = options;
-  const [viewportHeight, setViewportHeight] = useState(0);
-  const [contentHeight, setContentHeight] = useState(0);
-  const [offsetY, setOffsetY] = useState(0);
 
-  const onScroll = useCallback((event: NativeSyntheticEvent<ScrollMetrics>) => {
-    const newOffsetY = event.nativeEvent.contentOffset.y;
-    setOffsetY(newOffsetY);
+  const offsetY = useSharedValue(0);
+  const viewportHeight = useSharedValue(0);
+  const contentHeight = useSharedValue(0);
+
+  const onScroll = (event: NativeSyntheticEvent<ScrollMetrics>) => {
+    offsetY.value = event.nativeEvent.contentOffset.y;
 
     // Для TextInput contentSize может приходить в onScroll
     const height = event.nativeEvent.contentSize?.height;
     if (height != null && height > 0) {
-      setContentHeight(height);
+      contentHeight.value = height;
     }
-  }, []);
+  };
 
-  const onContentSizeChange = useCallback((event: ContentSizeEvent) => {
+  const onContentSizeChange = (event: ContentSizeEvent) => {
     const height = event.nativeEvent.contentSize.height;
     if (height > 0) {
-      setContentHeight(height);
+      contentHeight.value = height;
     }
-  }, []);
+  };
 
-  const onLayout = useCallback((event: LayoutChangeEvent) => {
+  const onLayout = (event: LayoutChangeEvent) => {
     const height = event.nativeEvent.layout.height;
     if (height > 0) {
-      setViewportHeight(height);
+      viewportHeight.value = height;
     }
-  }, []);
+  };
 
-  const isOverflow = contentHeight > viewportHeight + OVERFLOW_EPSILON;
+  const thumbStyle = useAnimatedStyle(() => {
+    const isOverflow =
+      contentHeight.value > viewportHeight.value + OVERFLOW_EPSILON;
 
-  // Уменьшаем рабочую высоту на отступы сверху и снизу
-  const trackHeight = Math.max(0, viewportHeight - verticalPadding * 2);
+    // Уменьшаем рабочую высоту на отступы сверху и снизу
+    const trackHeight = Math.max(
+      0,
+      viewportHeight.value - verticalPadding * 2,
+    );
 
-  const thumbHeight = isOverflow
-    ? Math.max(THUMB_MIN_HEIGHT, (viewportHeight / contentHeight) * trackHeight)
-    : 0;
+    const thumbHeight = isOverflow
+      ? Math.max(
+          THUMB_MIN_HEIGHT,
+          (viewportHeight.value / contentHeight.value) * trackHeight,
+        )
+      : 0;
 
-  const maxScroll = Math.max(1, contentHeight - viewportHeight);
-  const progress = Math.min(1, Math.max(0, offsetY / maxScroll));
+    const maxScroll = Math.max(1, contentHeight.value - viewportHeight.value);
+    const progress = Math.min(1, Math.max(0, offsetY.value / maxScroll));
 
-  // thumbTop учитывает верхний отступ и ограничивает движение
-  const thumbTop = isOverflow
-    ? verticalPadding + progress * (trackHeight - thumbHeight)
-    : verticalPadding;
+    // top учитывает верхний отступ и ограничивает движение
+    const top = isOverflow
+      ? verticalPadding + progress * (trackHeight - thumbHeight)
+      : verticalPadding;
+
+    return {
+      opacity: isOverflow ? 1 : 0,
+      top,
+      height: thumbHeight,
+    };
+  });
 
   return {
-    isVisible: isOverflow,
-    thumbHeight,
-    thumbTop,
+    thumbStyle,
     onScroll,
     onContentSizeChange,
     onLayout,
