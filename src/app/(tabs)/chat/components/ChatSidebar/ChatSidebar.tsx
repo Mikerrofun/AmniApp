@@ -1,19 +1,11 @@
 import { ArrowDown, ArrowUp, Plus } from "lucide-react-native";
 import { useEffect } from "react";
-import {
-  FlatList,
-  Pressable,
-  SectionList,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Pressable, Text, TextInput, View } from "react-native";
 import Animated, {
   Easing,
   Extrapolation,
   FadeIn,
   FadeOut,
-  LinearTransition,
   interpolate,
   useAnimatedStyle,
   useSharedValue,
@@ -22,21 +14,15 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
-  splitTitleByRanges,
   useChatActions,
   useChatSearch,
   useChats,
   useChatsStore,
 } from "@/features/chats";
-import {
-  ScrollIndicator,
-  useScrollIndicator,
-} from "@/shared/components/ui/ScrollIndicator";
 import { colors } from "@/shared/config/colors";
 import { useT } from "@/shared/i18n";
 
-import { ChatListItem } from "./ChatListItem";
-import { ChatListSection } from "./ChatListSection";
+import { ChatSearchList, ChatSectionList } from "./ChatScrollList";
 import {
   ANIMATION_DURATION,
   CONTENT_TOP_OFFSET,
@@ -65,22 +51,12 @@ function SidebarContent({
   const activeChatId = useChatsStore((state) => state.activeChatId);
   const sortDirection = useChatsStore((state) => state.sortDirection);
 
-  const scroll = useScrollIndicator({ verticalPadding: 8 });
-
   const isSearchActive = query.trim() !== "";
   useSearchResetOnClose(isOpen, resetSearch);
 
   const { sections, pinnedCount } = useChatSections(chats, sortDirection);
 
-  // Список перемонтируется при смене сортировки/pin'ов (key ниже) и
-  // при переключении в поиск — сбрасываем индикатор синхронно, иначе
-  // тумба прыгает по stale-смещению до первого scroll-события.
-  // resetScroll стабилен (useCallback в хуке)
   const listKey = `all-chats:${sortDirection}:${pinnedCount}`;
-  const { resetScroll } = scroll;
-  useEffect(() => {
-    resetScroll();
-  }, [listKey, isSearchActive, resetScroll]);
   const {
     handleSelectChat,
     handleCreateChat,
@@ -150,54 +126,20 @@ function SidebarContent({
         {/* Список всех чатов (по умолчанию) */}
         {!isSearchActive && (
           <Animated.View
-            key={`all-chats:${sortDirection}:${pinnedCount}`}
+            key={listKey}
             entering={FadeIn.duration(300)}
             exiting={FadeOut.duration(200)}
             className="absolute inset-0"
           >
-            <SectionList
-              className="flex-1"
+            <ChatSectionList
               sections={sections}
-              keyExtractor={(chat) => chat.id}
-              renderItem={({ item }) => (
-                <Animated.View
-                  layout={LinearTransition.duration(200).easing(
-                    Easing.bezier(0.22, 1, 0.36, 1),
-                  )}
-                  entering={FadeIn.duration(250)}
-                  exiting={FadeOut.duration(150)}
-                >
-                  <ChatListItem
-                    chat={item}
-                    isActive={item.id === activeChatId}
-                    onSelect={handleSelectChat}
-                    onRename={renameChat}
-                    onRenameComplete={handleRenameComplete}
-                    onTogglePin={togglePin}
-                    onDelete={deleteChat}
-                  />
-                </Animated.View>
-              )}
-              renderSectionHeader={({ section }) => (
-                <ChatListSection section={section} />
-              )}
-              ListEmptyComponent={
-                !isLoading ? (
-                  <Text className="px-2 pt-4 text-sm text-text-muted">
-                    {t("chats.empty")}
-                  </Text>
-                ) : null
-              }
-              showsVerticalScrollIndicator={false}
-              onScroll={scroll.onScroll}
-              onContentSizeChange={(width, height) =>
-                scroll.onContentSizeChange({
-                  nativeEvent: { contentSize: { width, height } },
-                })
-              }
-              onLayout={scroll.onLayout}
-              scrollEventThrottle={16}
-              contentContainerStyle={{ paddingBottom: 8 }}
+              isLoading={isLoading}
+              activeChatId={activeChatId}
+              onSelect={handleSelectChat}
+              onRename={renameChat}
+              onRenameComplete={handleRenameComplete}
+              onTogglePin={togglePin}
+              onDelete={deleteChat}
             />
           </Animated.View>
         )}
@@ -210,60 +152,18 @@ function SidebarContent({
             exiting={FadeOut.duration(200)}
             className="absolute inset-0"
           >
-            <FlatList
-              className="flex-1"
-              data={results}
-              keyExtractor={(result) => result.chat.id}
-              renderItem={({ item }) => (
-                <Animated.View
-                  layout={LinearTransition.duration(200).easing(
-                    Easing.bezier(0.22, 1, 0.36, 1),
-                  )}
-                  entering={FadeIn.duration(250)}
-                  exiting={FadeOut.duration(150)}
-                >
-                  <ChatListItem
-                    chat={item.chat}
-                    isActive={item.chat.id === activeChatId}
-                    onSelect={handleSelectChat}
-                    onRename={renameChat}
-                    onRenameComplete={handleRenameComplete}
-                    onTogglePin={togglePin}
-                    onDelete={deleteChat}
-                    titleSegments={splitTitleByRanges(
-                      item.chat.title,
-                      item.titleRanges,
-                    )}
-                  />
-                </Animated.View>
-              )}
-              ListEmptyComponent={
-                !isSearching ? (
-                  <Text className="px-2 pt-4 text-sm text-text-muted">
-                    {t("chats.searchEmpty")}
-                  </Text>
-                ) : null
-              }
-              showsVerticalScrollIndicator={false}
-              onScroll={scroll.onScroll}
-              onContentSizeChange={(width, height) =>
-                scroll.onContentSizeChange({
-                  nativeEvent: { contentSize: { width, height } },
-                })
-              }
-              onLayout={scroll.onLayout}
-              scrollEventThrottle={16}
-              contentContainerStyle={{ paddingBottom: 8 }}
+            <ChatSearchList
+              results={results}
+              isSearching={isSearching}
+              activeChatId={activeChatId}
+              onSelect={handleSelectChat}
+              onRename={renameChat}
+              onRenameComplete={handleRenameComplete}
+              onTogglePin={togglePin}
+              onDelete={deleteChat}
             />
           </Animated.View>
         )}
-
-        {/* Тонкий индикатор прокрутки справа, когда чатов много */}
-        <ScrollIndicator
-          style={scroll.thumbStyle}
-          side="right"
-          inset={-6}
-        />
       </View>
     </View>
   );

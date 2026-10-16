@@ -1,8 +1,11 @@
-import { useCallback } from "react";
 import type { LayoutChangeEvent, NativeSyntheticEvent } from "react-native";
 import { useAnimatedStyle, useSharedValue } from "react-native-reanimated";
 
-import { OVERFLOW_EPSILON, THUMB_MIN_HEIGHT } from "./ScrollIndicator.config";
+import {
+  OVERFLOW_EPSILON,
+  THUMB_MAX_HEIGHT,
+  THUMB_MIN_HEIGHT,
+} from "./ScrollIndicator.config";
 import type {
   ContentSizeEvent,
   ScrollMetrics,
@@ -10,9 +13,13 @@ import type {
 } from "./ScrollIndicator.types";
 
 /**
- * колбэк пишет в shared value из JS-потока, отрисовка тумбы идет
- * на UI-потоке. Колбэки намеренно не мемоизированы: компонент больше
- * не ре-рендерится при скролле, пересоздавать нечего.
+ * Колбэк пишет в shared value из JS-потока, отрисовка тумбы идёт
+ * на UI-потоке. Колбэки не мемоизированы — компонент не ре-рендерится
+ * при скролле, пересоздавать нечего.
+ *
+ * Хук намеренно не экспортирует resetScroll: правильное решение —
+ * перемонтировать сам компонент со списком (через key), тогда shared
+ * values получают чистые 0 при каждом монтировании без скачков.
  */
 export function useScrollIndicator(options: UseScrollIndicatorOptions = {}) {
   const { verticalPadding = 4 } = options;
@@ -45,12 +52,6 @@ export function useScrollIndicator(options: UseScrollIndicatorOptions = {}) {
     }
   };
 
-  // Сброс при пересоздании списка (смена сортировки/фильтра, поиск):
-  const resetScroll = useCallback(() => {
-    offsetY.value = 0;
-    contentHeight.value = 0;
-  }, []);
-
   const thumbStyle = useAnimatedStyle(() => {
     const isOverflow =
       contentHeight.value > viewportHeight.value + OVERFLOW_EPSILON;
@@ -58,16 +59,18 @@ export function useScrollIndicator(options: UseScrollIndicatorOptions = {}) {
     const trackHeight = Math.max(0, viewportHeight.value - verticalPadding * 2);
 
     const thumbHeight = isOverflow
-      ? Math.max(
-          THUMB_MIN_HEIGHT,
-          (viewportHeight.value / contentHeight.value) * trackHeight,
+      ? Math.min(
+          THUMB_MAX_HEIGHT,
+          Math.max(
+            THUMB_MIN_HEIGHT,
+            (viewportHeight.value / contentHeight.value) * trackHeight,
+          ),
         )
       : 0;
 
     const maxScroll = Math.max(1, contentHeight.value - viewportHeight.value);
     const progress = Math.min(1, Math.max(0, offsetY.value / maxScroll));
 
-    // top учитывает верхний отступ и ограничивает движение
     const top = isOverflow
       ? verticalPadding + progress * (trackHeight - thumbHeight)
       : verticalPadding;
@@ -84,6 +87,5 @@ export function useScrollIndicator(options: UseScrollIndicatorOptions = {}) {
     onScroll,
     onContentSizeChange,
     onLayout,
-    resetScroll,
   };
 }
