@@ -18,6 +18,10 @@ export const useChatsStore = create<ChatsState>((set) => ({
   pendingRenameChatId: null,
   drafts: {},
   globalDraft: '',
+  activeNotes: [],
+  activeTemplate: null,
+  tempTemplateId: null,
+  loadChatToken: 0,
 
   loadChats: async () => {
     set({ isLoading: true });
@@ -64,11 +68,15 @@ export const useChatsStore = create<ChatsState>((set) => ({
       const drafts = { ...state.drafts };
       delete drafts[id];
 
+      const isActiveDeleted = state.activeChatId === id;
+
       return {
         chats: state.chats.filter((chat) => chat.id !== id),
         drafts,
-        activeChatId:
-          state.activeChatId === id ? null : state.activeChatId,
+        activeChatId: isActiveDeleted ? null : state.activeChatId,
+        // Загруженный контекст удаленного чата больше не актуален
+        activeNotes: isActiveDeleted ? [] : state.activeNotes,
+        activeTemplate: isActiveDeleted ? null : state.activeTemplate,
         // Гигиена: не оставлять сигнал авто-rename на удаленный чат
         pendingRenameChatId:
           state.pendingRenameChatId === id
@@ -117,4 +125,70 @@ export const useChatsStore = create<ChatsState>((set) => ({
     set((state) =>
       state.pendingRenameChatId === id ? { pendingRenameChatId: null } : state,
     ),
+
+  loadChat: async (chatId) => {
+    // Токен: применяется только результат последнего вызова — более
+    // ранняя загрузка не перетрет notes, дописанные после нее
+    const token = useChatsStore.getState().loadChatToken + 1;
+    set({ loadChatToken: token });
+
+    try {
+      const [notes, template] = await Promise.all([
+        chatsRepository.getNotes(chatId),
+        chatsRepository.getTemplateForChat(chatId),
+      ]);
+
+      set((state) =>
+        state.activeChatId === chatId && state.loadChatToken === token
+          ? { activeNotes: notes, activeTemplate: template }
+          : state,
+      );
+    } catch {
+      // Контекст недоступен — чат открывается без истории
+    }
+  },
+
+  setChatTemplate: async (chatId, templateId) => {
+    const template = templateId
+      ? await chatsRepository.getTemplate(templateId)
+      : null;
+
+    await chatsRepository.setChatTemplate(chatId, templateId);
+
+    set((state) => ({
+      chats: state.chats.map((chat) =>
+        chat.id === chatId ? { ...chat, templateId } : chat,
+      ),
+      activeTemplate:
+        state.activeChatId === chatId ? template : state.activeTemplate,
+    }));
+  },
+
+  setTempTemplate: (templateId) => set({ tempTemplateId: templateId }),
+
+  initTempChat: async (title, templateId) => {
+    const template = templateId
+      ? await chatsRepository.getTemplate(templateId)
+      : null;
+    const chat = await chatsRepository.createChat(title, templateId);
+
+    set((state) => ({
+      chats: [chat, ...state.chats],
+      activeChatId: chat.id,
+      activeNotes: [],
+      activeTemplate: template,
+      // Выбор шаблона «переехал» в чат — временный выбор больше не нужен
+      tempTemplateId: null,
+      // Черновик временного чата переезжать в новый чат не должен
+      globalDraft: '',
+    }));
+
+    return chat;
+  },
+
+  appendLocalNote: (note) =>
+    set((state) => ({ activeNotes: [...state.activeNotes, note] })),
+
+  clearLoadedChat: () =>
+    set({ activeNotes: [], activeTemplate: null, tempTemplateId: null }),
 }));

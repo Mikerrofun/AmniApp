@@ -60,6 +60,7 @@ export async function searchChatsByKeywords(
        c.id,
        c.title,
        c.is_pinned,
+       c.template_id,
        c.created_at,
        c.updated_at,
        highlight(chats_fts, 1, ?, ?) AS highlighted_title
@@ -103,7 +104,7 @@ export async function searchChatsByEmbedding(
 
     try {
       rows = await db.getAllAsync<ChatEmbeddingSearchRow>(
-        `SELECT c.id, c.title, c.is_pinned, c.created_at, c.updated_at,
+        `SELECT c.id, c.title, c.is_pinned, c.template_id, c.created_at, c.updated_at,
                 v.distance
          FROM chats_vec v
          JOIN chats c ON c.id = v.chat_id

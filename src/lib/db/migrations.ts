@@ -123,6 +123,51 @@ async function migrate(db: SQLite.SQLiteDatabase): Promise<void> {
     }
   }
 
+  // v4: контекст чата переходит на модель context/notes (одна строка
+  // context = один контекст чата, записи контекста живут в notes),
+  // добавляются шаблоны API и привязка шаблона к чату. Таблица messages
+  // дропается — приложение в dev, данных в ней нет.
+  if (current < 4) {
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS context (
+        id TEXT PRIMARY KEY NOT NULL,
+        chat_id TEXT NOT NULL REFERENCES chats(id) ON DELETE CASCADE,
+        created_at INTEGER NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS notes (
+        id TEXT PRIMARY KEY NOT NULL,
+        context_id TEXT NOT NULL REFERENCES context(id) ON DELETE CASCADE,
+        role TEXT NOT NULL,
+        text TEXT NOT NULL,
+        created_at INTEGER NOT NULL
+      );
+
+      DROP TABLE IF EXISTS messages;
+
+      CREATE TABLE IF NOT EXISTS api_templates (
+        id TEXT PRIMARY KEY NOT NULL,
+        name TEXT NOT NULL UNIQUE,
+        provider TEXT NOT NULL,
+        base_url TEXT NOT NULL,
+        model TEXT NOT NULL,
+        key_ref TEXT NOT NULL,
+        created_at INTEGER NOT NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_context_chat_id ON context(chat_id);
+      CREATE INDEX IF NOT EXISTS idx_notes_context_id ON notes(context_id);
+    `);
+
+    const chatColumns = await db.getAllAsync<{ name: string }>(
+      'PRAGMA table_info(chats)',
+    );
+
+    if (!chatColumns.some((column) => column.name === 'template_id')) {
+      await db.execAsync('ALTER TABLE chats ADD COLUMN template_id TEXT;');
+    }
+  }
+
   await db.execAsync(`PRAGMA user_version = ${DB_SCHEMA_VERSION}`);
 }
 

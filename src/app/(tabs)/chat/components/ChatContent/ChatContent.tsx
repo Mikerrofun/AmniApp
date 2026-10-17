@@ -7,6 +7,7 @@ import { useT } from "@/shared/i18n";
 
 import type { ChatContentProps } from "./ChatContent.types";
 import { ChatInputArea } from "./ChatInputArea";
+import { ChatMessages } from "./ChatMessages";
 import { useKeyboardInset } from "./useKeyboardInset";
 
 /**
@@ -56,7 +57,8 @@ export function ChatContent({ topInset }: ChatContentProps) {
                 </Text>
                 <View style={{ width: 54 }} />
               </View>
-              {/* TODO: здесь будет список сообщений активного чата */}
+              {/* Сообщения активного чата: notes + стриминг ответа */}
+              <ChatMessages />
             </>
           ) : (
             <View className="flex-1 items-center justify-center px-6">

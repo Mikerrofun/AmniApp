@@ -33,6 +33,31 @@
     "emptyTitle": "Chat",
     "subtitle": "Talk to your assistant",
     "placeholder": "Message...",
-    "send": "Send"
+    "send": "Send",
+    "selectTemplate": "Select an API template",
+    "chooseTemplate": "Choose API template",
+    "noTemplates": "No templates available",
+    "requestFailed": "Request failed",
+    "templateMissing": "Template not found",
+    "templateKeyMissing": "Template key unavailable",
+    "errorPrefix": "Error:"
+  },
+  "apiTab": {
+    "title": "API",
+    "subtitle": "API templates",
+    "name": "Name",
+    "namePlaceholder": "My template",
+    "provider": "Provider",
+    "model": "Model",
+    "modelPlaceholder": "gpt-4.1-mini",
+    "apiKey": "API key",
+    "apiKeyPlaceholder": "sk-...",
+    "add": "Add",
+    "listTitle": "Templates",
+    "empty": "No templates yet",
+    "invalidForm": "Fill in all fields",
+    "duplicateName": "A template with this name already exists",
+    "deleteFailed": "Failed to delete template",
+    "deleteTemplate": "Delete template"
   }
 }

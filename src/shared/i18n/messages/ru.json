@@ -33,6 +33,31 @@
     "emptyTitle": "Чат",
     "subtitle": "Общение с ассистентом",
     "placeholder": "Сообщение...",
-    "send": "Отправить"
+    "send": "Отправить",
+    "selectTemplate": "Выберите шаблон API",
+    "chooseTemplate": "Выбрать шаблон API",
+    "noTemplates": "Нет доступных шаблонов",
+    "requestFailed": "Ошибка запроса",
+    "templateMissing": "Шаблон не найден",
+    "templateKeyMissing": "Ключ шаблона недоступен",
+    "errorPrefix": "Ошибка:"
+  },
+  "apiTab": {
+    "title": "API",
+    "subtitle": "Шаблоны-API",
+    "name": "Название",
+    "namePlaceholder": "Мой шаблон",
+    "provider": "Провайдер",
+    "model": "Модель",
+    "modelPlaceholder": "gpt-4.1-mini",
+    "apiKey": "API-ключ",
+    "apiKeyPlaceholder": "sk-...",
+    "add": "Добавить",
+    "listTitle": "Шаблоны",
+    "empty": "Нет шаблонов",
+    "invalidForm": "Заполните все поля",
+    "duplicateName": "Шаблон с таким именем уже существует",
+    "deleteFailed": "Не удалось удалить шаблон",
+    "deleteTemplate": "Удалить шаблон"
   }
 }

@@ -9,12 +9,14 @@ export function mapChatRow(
   row: Pick<
     ChatRow,
     'id' | 'title' | 'is_pinned' | 'created_at' | 'updated_at'
-  >,
+  > &
+    Partial<Pick<ChatRow, 'template_id'>>,
 ): ChatRecord {
   return {
     id: row.id,
     title: row.title,
     isPinned: row.is_pinned === 1,
+    templateId: row.template_id ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -30,25 +32,30 @@ export async function listChats(): Promise<ChatRecord[]> {
   return rows.map(mapChatRow);
 }
 
-export async function createChat(title: string): Promise<ChatRecord> {
+export async function createChat(
+  title: string,
+  templateId: string | null = null,
+): Promise<ChatRecord> {
   const db = await openDb();
   const now = Date.now();
   const chat: ChatRecord = {
     id: Crypto.randomUUID(),
     title,
     isPinned: false,
+    templateId,
     createdAt: now,
     updatedAt: now,
   };
 
   await db.runAsync(
-    `INSERT INTO chats (id, title, is_pinned, created_at, updated_at, context)
-     VALUES (?, ?, ?, ?, ?, '')`,
+    `INSERT INTO chats (id, title, is_pinned, created_at, updated_at, context, template_id)
+     VALUES (?, ?, ?, ?, ?, '', ?)`,
     chat.id,
     chat.title,
     chat.isPinned ? 1 : 0,
     chat.createdAt,
     chat.updatedAt,
+    chat.templateId,
   );
 
   return chat;
@@ -80,6 +87,19 @@ export async function setPinned(
   await db.runAsync(
     'UPDATE chats SET is_pinned = ? WHERE id = ?',
     isPinned ? 1 : 0,
+    id,
+  );
+}
+
+/** Привязывает шаблон API к чату (updated_at не трогаем — список не перетасовывается) */
+export async function setChatTemplate(
+  id: string,
+  templateId: string | null,
+): Promise<void> {
+  const db = await openDb();
+  await db.runAsync(
+    'UPDATE chats SET template_id = ? WHERE id = ?',
+    templateId,
     id,
   );
 }

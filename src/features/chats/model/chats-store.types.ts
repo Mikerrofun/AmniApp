@@ -1,4 +1,5 @@
-import type { ChatRecord } from '@/types/chat';
+import type { ApiTemplate } from '@/types/api-template';
+import type { ChatRecord, NoteRecord } from '@/types/chat';
 
 /** Направление сортировки списка чатов */
 export type SortDirection = 'newest' | 'oldest';
@@ -36,6 +37,17 @@ export type ChatsState = {
   drafts: Record<string, string>;
   /** Черновик временного чата (когда активный чат не выбран) */
   globalDraft: string;
+  /** Записи контекста активного чата (по возрастанию created_at) */
+  activeNotes: NoteRecord[];
+  /** Шаблон, привязанный к активному чату (null — временный чат или без шаблона) */
+  activeTemplate: ApiTemplate | null;
+  /** Шаблон, выбранный для временного чата до его создания */
+  tempTemplateId: string | null;
+  /**
+   * Счетчик загрузок контекста: применяется только результат последнего
+   * вызова loadChat — более ранние загрузки не перетирают свежие данные.
+   */
+  loadChatToken: number;
 
   loadChats: () => Promise<void>;
   createChat: (title: string) => Promise<ChatRecord>;
@@ -49,4 +61,19 @@ export type ChatsState = {
   consumeFocusChat: (id: string) => void;
   requestInputFocus: () => void;
   consumePendingRename: (id: string) => void;
+  /** Загружает notes и привязанный шаблон чата (для открытия старого чата) */
+  loadChat: (chatId: string) => Promise<void>;
+  /** Выбирает шаблон для существующего чата (стора + БД) */
+  setChatTemplate: (chatId: string, templateId: string | null) => Promise<void>;
+  /** Выбирает шаблон для временного чата (до его создания) */
+  setTempTemplate: (templateId: string | null) => void;
+  /**
+   * Инициализирует временный чат при первой отправке: пишет в БД,
+   * делает активным, попадает в список. Без сигнала авто-rename.
+   */
+  initTempChat: (title: string, templateId: string | null) => Promise<ChatRecord>;
+  /** Добавляет note в активный чат сразу в UI (уже записанную в БД) */
+  appendLocalNote: (note: NoteRecord) => void;
+  /** Сбрасывает загруженный контекст (при уходе во временный чат) */
+  clearLoadedChat: () => void;
 };

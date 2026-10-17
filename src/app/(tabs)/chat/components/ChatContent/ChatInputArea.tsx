@@ -1,8 +1,18 @@
-import { Send } from "lucide-react-native";
-import { useEffect, useRef } from "react";
-import { Pressable, TextInput, View } from "react-native";
+import { Check, KeyRound, Plus } from "lucide-react-native";
+import { useEffect, useRef, useState } from "react";
+import { Pressable, Text, TextInput, View } from "react-native";
 
-import { useChatDraft, useChatsStore } from "@/features/chats";
+import {
+  useChatActions,
+  useChatDraft,
+  useChatsStore,
+  useGenerationStore,
+} from "@/features/chats";
+import { useTemplatesStore } from "@/features/api-templates";
+import {
+  PopoverMenu,
+  usePopoverAnchor,
+} from "@/shared/components/ui/PopoverMenu";
 import {
   ScrollIndicator,
   useScrollIndicator,
@@ -12,16 +22,30 @@ import { useT } from "@/shared/i18n";
 
 import type { ChatInputAreaProps } from "./ChatInputArea.types";
 
+/** Ширина поповера выбора шаблона, px */
+const TEMPLATE_POPOVER_WIDTH = 240;
+
 /**
  * Поле ввода. Видно всегда — и когда чат выбран, и когда нет
- * (временный чат, chatId = null). Текст = черновик в памяти стора:
- * переживает переключение чатов и вкладок, стирается при рестарте.
- * Кнопка отправки — визуальная (disabled): отправка сообщений не входит
- * в эту итерацию.
+ * (временный чат, chatId = null). Текст = черновик в памяти стора.
+ *
+ * Слева — мини-кнопка выбора шаблона API (поповер со списком).
+ * Без шаблона инпут заблокирован с подсказкой, у кнопки отправки
+ * нейтральный значок (плюсик); с шаблоном — закрашенный кружок,
+ * при непустом тексте кнопка активна.
  */
 export function ChatInputArea({ chatId }: ChatInputAreaProps) {
   const t = useT();
   const { draft, handleChange } = useChatDraft(chatId);
+  const { sendMessage } = useChatActions();
+
+  const templates = useTemplatesStore((state) => state.templates);
+  const loadTemplates = useTemplatesStore((state) => state.loadTemplates);
+  const activeTemplate = useChatsStore((state) => state.activeTemplate);
+  const tempTemplateId = useChatsStore((state) => state.tempTemplateId);
+  const setChatTemplate = useChatsStore((state) => state.setChatTemplate);
+  const setTempTemplate = useChatsStore((state) => state.setTempTemplate);
+  const generationStatus = useGenerationStore((state) => state.status);
 
   const inputRef = useRef<TextInput>(null);
   const focusChatId = useChatsStore((state) => state.focusChatId);
@@ -30,6 +54,24 @@ export function ChatInputArea({ chatId }: ChatInputAreaProps) {
   const lastFocusTokenRef = useRef(focusInputToken);
 
   const scroll = useScrollIndicator({ verticalPadding: 4 });
+
+  const { anchorRef, anchor, measure } = usePopoverAnchor();
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
+
+  // Шаблоны нужны и в чате (выбор), и для отображения выбранного
+  useEffect(() => {
+    void loadTemplates();
+  }, [loadTemplates]);
+
+  // Выбранный шаблон: у существующего чата — из loadChat,
+  // у временного — из временного выбора стора
+  const selectedTemplate =
+    chatId !== null
+      ? activeTemplate
+      : (templates.find((tpl) => tpl.id === tempTemplateId) ?? null);
+  const hasTemplate = selectedTemplate !== null;
+  const isStreaming = generationStatus === "streaming";
+  const canSend = hasTemplate && draft.trim() !== "" && !isStreaming;
 
   // Фокус после создания чата
   useEffect(() => {
@@ -47,9 +89,85 @@ export function ChatInputArea({ chatId }: ChatInputAreaProps) {
     inputRef.current?.focus();
   }, [focusInputToken]);
 
+  const handleOpenPicker = () => {
+    measure();
+    setIsPickerOpen(true);
+  };
+
+  const handleSelectTemplate = (templateId: string) => {
+    setIsPickerOpen(false);
+
+    if (chatId === null) {
+      setTempTemplate(templateId);
+    } else {
+      void setChatTemplate(chatId, templateId);
+    }
+  };
+
+  const handleSend = () => {
+    if (!canSend) return;
+
+    void sendMessage(chatId, draft);
+  };
+
   return (
     <View className="px-4 pb-3">
+      <PopoverMenu
+        open={isPickerOpen}
+        onClose={() => setIsPickerOpen(false)}
+        anchor={anchor}
+        width={TEMPLATE_POPOVER_WIDTH}
+      >
+        {templates.length === 0 ? (
+          <Text className="px-3 py-2 text-sm text-text-muted">
+            {t("chatInput.noTemplates")}
+          </Text>
+        ) : (
+          templates.map((template) => {
+            const isSelected = template.id === selectedTemplate?.id;
+
+            return (
+              <Pressable
+                key={template.id}
+                accessibilityRole="button"
+                accessibilityLabel={t("chatInput.chooseTemplate")}
+                onPress={() => handleSelectTemplate(template.id)}
+                className="flex-row items-center gap-2 px-3 py-2"
+              >
+                <View className="min-w-0 flex-1">
+                  <Text
+                    numberOfLines={1}
+                    className="text-sm text-text-primary"
+                  >
+                    {template.name}
+                  </Text>
+                  <Text numberOfLines={1} className="text-xs text-text-muted">
+                    {template.model}
+                  </Text>
+                </View>
+                {isSelected && (
+                  <Check size={14} color={colors.accent} />
+                )}
+              </Pressable>
+            );
+          })
+        )}
+      </PopoverMenu>
+
       <View className="flex-row items-center gap-2 rounded-3xl border border-white/10 bg-white/5 p-2">
+        {/* Мини-кнопка выбора шаблона API */}
+        <View className="h-9 w-9 items-center justify-center rounded-full bg-white/5">
+          <Pressable
+            ref={anchorRef}
+            accessibilityRole="button"
+            accessibilityLabel={t("chatInput.chooseTemplate")}
+            onPress={handleOpenPicker}
+            className="h-full w-full items-center justify-center"
+          >
+            <KeyRound size={16} color={colors.textMuted} />
+          </Pressable>
+        </View>
+
         <View className="relative min-w-0 flex-1">
           <TextInput
             ref={inputRef}
@@ -58,7 +176,12 @@ export function ChatInputArea({ chatId }: ChatInputAreaProps) {
             multiline
             scrollEnabled
             textAlignVertical="center"
-            placeholder={t("chatInput.placeholder")}
+            editable={hasTemplate}
+            placeholder={
+              hasTemplate
+                ? t("chatInput.placeholder")
+                : t("chatInput.selectTemplate")
+            }
             placeholderTextColor={colors.placeholder}
             onScroll={scroll.onScroll}
             onContentSizeChange={scroll.onContentSizeChange}
@@ -76,16 +199,26 @@ export function ChatInputArea({ chatId }: ChatInputAreaProps) {
           {/* Индикатор прокрутки слева: видно, сколько текста скрыто */}
           <ScrollIndicator style={scroll.thumbStyle} side="left" inset={1} />
         </View>
-        <View className="h-9 w-9 items-center justify-center rounded-3xl bg-white/5">
-          <Pressable
-            disabled
-            accessibilityRole="button"
-            accessibilityLabel={t("chatInput.send")}
-            className="h-full w-full items-center justify-center"
-          >
-            <Send size={16} color={colors.textMuted} />
-          </Pressable>
-        </View>
+
+        {/* Кнопка отправки: плюсик без шаблона, закрашенный кружок — с шаблоном */}
+        <Pressable
+          onPress={handleSend}
+          disabled={!canSend}
+          accessibilityRole="button"
+          accessibilityLabel={t("chatInput.send")}
+          accessibilityState={{ disabled: !canSend }}
+          className="h-9 w-9 items-center justify-center rounded-full bg-white/5"
+        >
+          {hasTemplate ? (
+            <View
+              className={`h-4 w-4 rounded-full ${
+                canSend ? "bg-accent" : "bg-white/20"
+              }`}
+            />
+          ) : (
+            <Plus size={16} color={colors.textMuted} />
+          )}
+        </Pressable>
       </View>
     </View>
   );
