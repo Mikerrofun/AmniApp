@@ -1,4 +1,5 @@
-import { Text, View } from 'react-native';
+import { Text, View } from "react-native";
+import { CreateShablon } from "./api/components/CreateShablonArea/CreateShablon";
 
 export default function ApiScreen() {
   return (
@@ -7,6 +8,7 @@ export default function ApiScreen() {
       <Text className="pt-2 text-center text-sm text-text-muted">
         Шаблоны-API
       </Text>
+      <CreateShablon />
     </View>
   );
 }
