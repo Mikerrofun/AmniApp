@@ -21,6 +21,7 @@ export const useChatsStore = create<ChatsState>((set) => ({
   activeNotes: [],
   activeTemplate: null,
   tempTemplateId: null,
+  lastTemplateId: null,
   loadChatToken: 0,
 
   loadChats: async () => {
@@ -102,7 +103,13 @@ export const useChatsStore = create<ChatsState>((set) => ({
 
   setGlobalDraft: (draft) => set({ globalDraft: draft }),
 
-  setActiveChat: (id) => set({ activeChatId: id }),
+  setActiveChat: (id) =>
+    set((state) => ({
+      activeChatId: id,
+      // Временный чат сразу получает последний используемый шаблон
+      tempTemplateId:
+        id === null ? state.lastTemplateId : state.tempTemplateId,
+    })),
 
   setSortDirection: (direction) => set({ sortDirection: direction }),
 
@@ -150,10 +157,25 @@ export const useChatsStore = create<ChatsState>((set) => ({
       ),
       activeTemplate:
         state.activeChatId === chatId ? template : state.activeTemplate,
+      lastTemplateId:
+        templateId !== null ? templateId : state.lastTemplateId,
     }));
   },
 
-  setTempTemplate: (templateId) => set({ tempTemplateId: templateId }),
+  setTempTemplate: (templateId) =>
+    set((state) => ({
+      tempTemplateId: templateId,
+      lastTemplateId:
+        templateId !== null ? templateId : state.lastTemplateId,
+    })),
+
+  /**
+   * Глобальный «последний используемый» шаблон. In-memory состояние
+   * уровня UI (как drafts): пишется при выборе в поповере, при отправке
+   * с шаблоном и при создании шаблона; при перезагрузке приложения
+   * сбрасывается. Временный чат стартует с этим шаблоном.
+   */
+  setLastTemplateId: (templateId) => set({ lastTemplateId: templateId }),
 
   initTempChat: async (title, templateId) => {
     const template = templateId
@@ -179,5 +201,10 @@ export const useChatsStore = create<ChatsState>((set) => ({
     set((state) => ({ activeNotes: [...state.activeNotes, note] })),
 
   clearLoadedChat: () =>
-    set({ activeNotes: [], activeTemplate: null, tempTemplateId: null }),
+    set((state) => ({
+      activeNotes: [],
+      activeTemplate: null,
+      // Возврат во временный чат — подставляем последний используемый шаблон
+      tempTemplateId: state.lastTemplateId,
+    })),
 }));

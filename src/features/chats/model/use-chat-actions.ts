@@ -90,6 +90,10 @@ export function useChatActions() {
         return;
       }
 
+      // Сообщение реально уходит этим шаблоном — запоминаем его
+      // как «последний используемый» (in-memory, как drafts)
+      useChatsStore.getState().setLastTemplateId(templateId);
+
       let targetChatId = chatId;
 
       if (targetChatId === null) {

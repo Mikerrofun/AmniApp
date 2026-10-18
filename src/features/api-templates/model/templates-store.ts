@@ -2,6 +2,8 @@ import { create } from 'zustand';
 
 import * as templatesRepository from '@/lib/db';
 
+import { useChatsStore } from '@/features/chats/model/chats-store';
+
 import type { TemplatesState } from './templates-store.types';
 
 /**
@@ -32,6 +34,10 @@ export const useTemplatesStore = create<TemplatesState>((set) => ({
     );
 
     set((state) => ({ templates: [...state.templates, template] }));
+
+    // Новый шаблон сразу становится «последним используемым»
+    // (in-memory состояние chats-store, как drafts)
+    useChatsStore.getState().setLastTemplateId(template.id);
 
     return template;
   },

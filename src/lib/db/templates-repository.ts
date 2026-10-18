@@ -11,7 +11,9 @@ import type {
 import { openDb } from './migrations';
 
 /** Префикс ключей SecureStore: в БД хранится только key_ref */
-const KEY_PREFIX = 'template-key:';
+// Без двоеточий: expo-secure-store на Android допускает в ключах
+// только буквы, цифры, '.', '-' и '_' — 'template-key:<id>' ломает запись
+const KEY_PREFIX = 'template-key-';
 
 function mapTemplateRow(row: ApiTemplateRow): ApiTemplate {
   return {
@@ -48,7 +50,7 @@ export async function getTemplate(
 }
 
 /**
- * Создает шаблон: ключ пишется в SecureStore под `template-key:<id>`,
+ * Создает шаблон: ключ пишется в SecureStore под `template-key-<id>`,
  * в БД — только key_ref. При ошибке вставки (например, дубликат имени)
  * ключ удаляется, чтобы не оставлять мусор в SecureStore.
  */
