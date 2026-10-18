@@ -2,6 +2,8 @@ import { create } from 'zustand';
 
 import * as chatsRepository from '@/lib/db';
 
+import { loadLastTemplateId, saveLastTemplateId } from '../lib/last-template';
+
 import type { ChatsState } from './chats-store.types';
 
 /**
@@ -21,14 +23,20 @@ export const useChatsStore = create<ChatsState>((set) => ({
   activeNotes: [],
   activeTemplate: null,
   tempTemplateId: null,
+  lastTemplateId: null,
   loadChatToken: 0,
 
   loadChats: async () => {
     set({ isLoading: true });
 
     try {
-      const chats = await chatsRepository.listChats();
-      set({ chats, isLoading: false });
+      // Гидрация глобального шаблона вместе со списком: к моменту
+      // открытия временного чата «последний шаблон» уже известен
+      const [chats, lastTemplateId] = await Promise.all([
+        chatsRepository.listChats(),
+        loadLastTemplateId(),
+      ]);
+      set({ chats, lastTemplateId, isLoading: false });
     } catch {
       set({ isLoading: false });
     }
@@ -111,7 +119,13 @@ export const useChatsStore = create<ChatsState>((set) => ({
 
   setGlobalDraft: (draft) => set({ globalDraft: draft }),
 
-  setActiveChat: (id) => set({ activeChatId: id }),
+  setActiveChat: (id) =>
+    set((state) => ({
+      activeChatId: id,
+      // Временный чат сразу получает последний используемый шаблон
+      tempTemplateId:
+        id === null ? state.lastTemplateId : state.tempTemplateId,
+    })),
 
   setSortDirection: (direction) => set({ sortDirection: direction }),
 
@@ -155,16 +169,34 @@ export const useChatsStore = create<ChatsState>((set) => ({
 
     await chatsRepository.setChatTemplate(chatId, templateId);
 
+    if (templateId !== null) {
+      // Выбор запоминается глобально сразу, без ожидания отправки
+      void saveLastTemplateId(templateId);
+    }
+
     set((state) => ({
       chats: state.chats.map((chat) =>
         chat.id === chatId ? { ...chat, templateId } : chat,
       ),
       activeTemplate:
         state.activeChatId === chatId ? template : state.activeTemplate,
+      lastTemplateId:
+        templateId !== null ? templateId : state.lastTemplateId,
     }));
   },
 
-  setTempTemplate: (templateId) => set({ tempTemplateId: templateId }),
+  setTempTemplate: (templateId) => {
+    if (templateId !== null) {
+      // Глобальный «последний шаблон» обновляется сразу при выборе
+      void saveLastTemplateId(templateId);
+    }
+
+    set((state) => ({
+      tempTemplateId: templateId,
+      lastTemplateId:
+        templateId !== null ? templateId : state.lastTemplateId,
+    }));
+  },
 
   initTempChat: async (title, templateId) => {
     const template = templateId
@@ -190,5 +222,10 @@ export const useChatsStore = create<ChatsState>((set) => ({
     set((state) => ({ activeNotes: [...state.activeNotes, note] })),
 
   clearLoadedChat: () =>
-    set({ activeNotes: [], activeTemplate: null, tempTemplateId: null }),
+    set((state) => ({
+      activeNotes: [],
+      activeTemplate: null,
+      // Возврат во временный чат — подставляем последний используемый шаблон
+      tempTemplateId: state.lastTemplateId,
+    })),
 }));

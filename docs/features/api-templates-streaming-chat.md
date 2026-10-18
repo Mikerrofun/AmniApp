@@ -82,10 +82,10 @@ if (current < 4) {
 
 ```ts
 // src/lib/db/templates-repository.ts
-const KEY_PREFIX = 'template-key:';
+const KEY_PREFIX = 'template-key-';
 
 // createTemplate(name, provider, model, apiKey) → ApiTemplate
-//   ключ → SecureStore.setItemAsync(`template-key:<id>`, apiKey)
+//   ключ → SecureStore.setItemAsync(`template-key-<id>`, apiKey)
 //   в БД пишется только key_ref; при ошибке INSERT (дубликат имени)
 //   ключ из SecureStore удаляется — мусора не остается
 // deleteTemplate(id) → DELETE + SecureStore.deleteItemAsync(key_ref)
@@ -218,6 +218,12 @@ sendMessage(chatId: string | null, text: string): Promise<void>
 // activeNotes: NoteRecord[]      — контекст активного чата
 // activeTemplate: ApiTemplate | null — шаблон активного чата
 // tempTemplateId: string | null  — выбор шаблона ДО создания чата
+// lastTemplateId: string | null  — глобальный «последний используемый»
+//   шаблон: обновляется СРАЗУ при выборе в поповере, персистится
+//   в SecureStore (ключ 'last-template-id', src/features/chats/lib/
+//   last-template.ts) и переживает рестарт. Временный чат всегда
+//   стартует с этим шаблоном (setActiveChat(null) и clearLoadedChat
+//   подставляют его в tempTemplateId)
 // loadChatToken: number          — защита от гонок загрузки
 //
 // loadChat(chatId) — инкрементит токен, параллельно тянет
@@ -225,11 +231,14 @@ sendMessage(chatId: string | null, text: string): Promise<void>
 //   activeChatId и токен не изменились (ранняя загрузка не
 //   перетирает notes, дописанные после нее)
 // setChatTemplate(chatId, templateId) — БД + chats[] + activeTemplate
-// setTempTemplate(id) — выбор для временного чата
+//   + обновление lastTemplateId (персист сразу, без ожидания отправки)
+// setTempTemplate(id) — выбор для временного чата + обновление
+//   lastTemplateId (персист сразу)
 // initTempChat(title, templateId) — createChat в БД, чат в список,
 //   становится активным, tempTemplateId сбрасывается, globalDraft очищается
 // appendLocalNote(note) — push в activeNotes
-// clearLoadedChat() — сброс при уходе во временный чат
+// clearLoadedChat() — сброс при уходе во временный чат,
+//   tempTemplateId = lastTemplateId
 // deleteChat — теперь еще чистит activeNotes/activeTemplate удаленного чата
 ```
 
@@ -312,8 +321,8 @@ ChatCompletionError / network
 Вкладка API → заполнение формы → «Добавить»
 ↓ apiTemplateFormSchema.safeParse → ошибка → тост
 ↓ addTemplate → createTemplate
-↓   SecureStore.setItemAsync('template-key:<id>', apiKey)
-↓   INSERT INTO api_templates (key_ref = 'template-key:<id>')
+↓   SecureStore.setItemAsync('template-key-<id>', apiKey)
+↓   INSERT INTO api_templates (key_ref = 'template-key-<id>')
 ↓   ошибка INSERT → deleteItemAsync(key_ref) → тост duplicateName
 ↓ templates-store: templates + template → список обновился
 ```

@@ -57,6 +57,7 @@
     "empty": "No templates yet",
     "invalidForm": "Fill in all fields",
     "duplicateName": "A template with this name already exists",
+      "saveFailed": "Failed to save template",
     "deleteFailed": "Failed to delete template",
     "deleteTemplate": "Delete template"
   }

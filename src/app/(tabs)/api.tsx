@@ -61,9 +61,16 @@ export default function ApiScreen() {
       setName("");
       setModel("");
       setApiKey("");
-    } catch {
-      // UNIQUE(name) — самый вероятный отказ вставки
-      showToast(t("apiTab.duplicateName"));
+    } catch (error) {
+      console.log("[v0] createTemplate failed:", error);
+      // UNIQUE(name) — самый вероятный отказ вставки; остальные ошибки
+      // (например, отказ SecureStore) показываем отдельным тостом
+      const message = error instanceof Error ? error.message : "";
+      showToast(
+        message.includes("UNIQUE")
+          ? t("apiTab.duplicateName")
+          : t("apiTab.saveFailed"),
+      );
     }
   };
 
