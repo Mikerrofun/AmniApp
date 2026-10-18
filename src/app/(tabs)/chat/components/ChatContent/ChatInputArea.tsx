@@ -2,13 +2,13 @@ import { Check, KeyRound, Plus } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 
+import { useTemplatesStore } from "@/features/api-templates";
 import {
   useChatActions,
   useChatDraft,
   useChatsStore,
   useGenerationStore,
 } from "@/features/chats";
-import { useTemplatesStore } from "@/features/api-templates";
 import {
   PopoverMenu,
   usePopoverAnchor,
@@ -22,17 +22,11 @@ import { useT } from "@/shared/i18n";
 
 import type { ChatInputAreaProps } from "./ChatInputArea.types";
 
-/** Ширина поповера выбора шаблона, px */
 const TEMPLATE_POPOVER_WIDTH = 240;
 
 /**
  * Поле ввода. Видно всегда — и когда чат выбран, и когда нет
  * (временный чат, chatId = null). Текст = черновик в памяти стора.
- *
- * Слева — мини-кнопка выбора шаблона API (поповер со списком).
- * Без шаблона инпут заблокирован с подсказкой, у кнопки отправки
- * нейтральный значок (плюсик); с шаблоном — закрашенный кружок,
- * при непустом тексте кнопка активна.
  */
 export function ChatInputArea({ chatId }: ChatInputAreaProps) {
   const t = useT();
@@ -58,13 +52,10 @@ export function ChatInputArea({ chatId }: ChatInputAreaProps) {
   const { anchorRef, anchor, measure } = usePopoverAnchor();
   const [isPickerOpen, setIsPickerOpen] = useState(false);
 
-  // Шаблоны нужны и в чате (выбор), и для отображения выбранного
   useEffect(() => {
     void loadTemplates();
   }, [loadTemplates]);
 
-  // Выбранный шаблон: у существующего чата — из loadChat,
-  // у временного — из временного выбора стора
   const selectedTemplate =
     chatId !== null
       ? activeTemplate
@@ -73,7 +64,6 @@ export function ChatInputArea({ chatId }: ChatInputAreaProps) {
   const isStreaming = generationStatus === "streaming";
   const canSend = hasTemplate && draft.trim() !== "" && !isStreaming;
 
-  // Фокус после создания чата
   useEffect(() => {
     if (chatId !== null && focusChatId === chatId) {
       consumeFocusChat(chatId);
@@ -135,19 +125,14 @@ export function ChatInputArea({ chatId }: ChatInputAreaProps) {
                 className="flex-row items-center gap-2 px-3 py-2"
               >
                 <View className="min-w-0 flex-1">
-                  <Text
-                    numberOfLines={1}
-                    className="text-sm text-text-primary"
-                  >
+                  <Text numberOfLines={1} className="text-sm text-text-primary">
                     {template.name}
                   </Text>
                   <Text numberOfLines={1} className="text-xs text-text-muted">
                     {template.model}
                   </Text>
                 </View>
-                {isSelected && (
-                  <Check size={14} color={colors.accent} />
-                )}
+                {isSelected && <Check size={14} color={colors.accent} />}
               </Pressable>
             );
           })

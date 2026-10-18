@@ -1,8 +1,8 @@
-import { create } from 'zustand';
+import { create } from "zustand";
 
-import * as chatsRepository from '@/lib/db';
+import * as chatsRepository from "@/lib/db";
 
-import type { ChatsState } from './chats-store.types';
+import type { ChatsState } from "./chats-store.types";
 
 /**
  * Состояние чатов. Экшены вызывают репозиторий и обновляют стейт.
@@ -11,13 +11,13 @@ import type { ChatsState } from './chats-store.types';
 export const useChatsStore = create<ChatsState>((set) => ({
   chats: [],
   activeChatId: null,
-  sortDirection: 'newest',
+  sortDirection: "newest",
   isLoading: false,
   focusChatId: null,
   focusInputToken: 0,
   pendingRenameChatId: null,
   drafts: {},
-  globalDraft: '',
+  globalDraft: "",
   activeNotes: [],
   activeTemplate: null,
   tempTemplateId: null,
@@ -41,11 +41,8 @@ export const useChatsStore = create<ChatsState>((set) => ({
       chats: [chat, ...state.chats],
       activeChatId: chat.id,
       focusChatId: chat.id,
-      // Сигнал авто-rename: новый чат сразу открывается в режиме rename
       pendingRenameChatId: chat.id,
-      // Черновик временного чата переезжать в новый чат не должен:
-      // временный чат после создания реального недоступен
-      globalDraft: '',
+      globalDraft: "",
     }));
 
     return chat;
@@ -74,20 +71,15 @@ export const useChatsStore = create<ChatsState>((set) => ({
         chats: state.chats.filter((chat) => chat.id !== id),
         drafts,
         activeChatId: isActiveDeleted ? null : state.activeChatId,
-        // Загруженный контекст удаленного чата больше не актуален
         activeNotes: isActiveDeleted ? [] : state.activeNotes,
         activeTemplate: isActiveDeleted ? null : state.activeTemplate,
-        // Гигиена: не оставлять сигнал авто-rename на удаленный чат
         pendingRenameChatId:
-          state.pendingRenameChatId === id
-            ? null
-            : state.pendingRenameChatId,
+          state.pendingRenameChatId === id ? null : state.pendingRenameChatId,
       };
     });
   },
 
   setPinned: async (id, isPinned) => {
-    // Оптимистичное обновление: гвоздик реагирует мгновенно
     set((state) => ({
       chats: state.chats.map((chat) =>
         chat.id === id ? { ...chat, isPinned } : chat,
@@ -97,7 +89,6 @@ export const useChatsStore = create<ChatsState>((set) => ({
     try {
       await chatsRepository.setPinned(id, isPinned);
     } catch {
-      // Откат при ошибке записи
       set((state) => ({
         chats: state.chats.map((chat) =>
           chat.id === id ? { ...chat, isPinned: !isPinned } : chat,
@@ -143,9 +134,7 @@ export const useChatsStore = create<ChatsState>((set) => ({
           ? { activeNotes: notes, activeTemplate: template }
           : state,
       );
-    } catch {
-      // Контекст недоступен — чат открывается без истории
-    }
+    } catch {}
   },
 
   setChatTemplate: async (chatId, templateId) => {
@@ -180,7 +169,7 @@ export const useChatsStore = create<ChatsState>((set) => ({
       // Выбор шаблона «переехал» в чат — временный выбор больше не нужен
       tempTemplateId: null,
       // Черновик временного чата переезжать в новый чат не должен
-      globalDraft: '',
+      globalDraft: "",
     }));
 
     return chat;
