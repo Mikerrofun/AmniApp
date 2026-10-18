@@ -20,7 +20,6 @@ export const useChatsStore = create<ChatsState>((set) => ({
   globalDraft: "",
   activeNotes: [],
   activeTemplate: null,
-  tempTemplateId: null,
   lastTemplateId: null,
   loadChatToken: 0,
 
@@ -103,13 +102,7 @@ export const useChatsStore = create<ChatsState>((set) => ({
 
   setGlobalDraft: (draft) => set({ globalDraft: draft }),
 
-  setActiveChat: (id) =>
-    set((state) => ({
-      activeChatId: id,
-      // Временный чат сразу получает последний используемый шаблон
-      tempTemplateId:
-        id === null ? state.lastTemplateId : state.tempTemplateId,
-    })),
+  setActiveChat: (id) => set({ activeChatId: id }),
 
   setSortDirection: (direction) => set({ sortDirection: direction }),
 
@@ -162,18 +155,12 @@ export const useChatsStore = create<ChatsState>((set) => ({
     }));
   },
 
-  setTempTemplate: (templateId) =>
-    set((state) => ({
-      tempTemplateId: templateId,
-      lastTemplateId:
-        templateId !== null ? templateId : state.lastTemplateId,
-    })),
-
   /**
    * Глобальный «последний используемый» шаблон. In-memory состояние
    * уровня UI (как drafts): пишется при выборе в поповере, при отправке
    * с шаблоном и при создании шаблона; при перезагрузке приложения
-   * сбрасывается. Временный чат стартует с этим шаблоном.
+   * сбрасывается. Временный чат читает его напрямую — отдельного
+   * «временного выбора» больше нет.
    */
   setLastTemplateId: (templateId) => set({ lastTemplateId: templateId }),
 
@@ -188,8 +175,6 @@ export const useChatsStore = create<ChatsState>((set) => ({
       activeChatId: chat.id,
       activeNotes: [],
       activeTemplate: template,
-      // Выбор шаблона «переехал» в чат — временный выбор больше не нужен
-      tempTemplateId: null,
       // Черновик временного чата переезжать в новый чат не должен
       globalDraft: "",
     }));
@@ -201,10 +186,5 @@ export const useChatsStore = create<ChatsState>((set) => ({
     set((state) => ({ activeNotes: [...state.activeNotes, note] })),
 
   clearLoadedChat: () =>
-    set((state) => ({
-      activeNotes: [],
-      activeTemplate: null,
-      // Возврат во временный чат — подставляем последний используемый шаблон
-      tempTemplateId: state.lastTemplateId,
-    })),
+    set({ activeNotes: [], activeTemplate: null }),
 }));

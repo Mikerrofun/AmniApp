@@ -65,10 +65,11 @@ export function useChatActions() {
       if (useGenerationStore.getState().status === 'streaming') return;
 
       const chatsState = useChatsStore.getState();
+      // У временного чата нет своего шаблона — используется последний
       const templateId = chatId
         ? (chatsState.chats.find((chat) => chat.id === chatId)?.templateId ??
           null)
-        : chatsState.tempTemplateId;
+        : chatsState.lastTemplateId;
 
       if (!templateId) {
         showToast(t('chatInput.selectTemplate'));

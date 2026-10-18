@@ -217,7 +217,6 @@ sendMessage(chatId: string | null, text: string): Promise<void>
 // src/features/chats/model/chats-store.ts
 // activeNotes: NoteRecord[]      — контекст активного чата
 // activeTemplate: ApiTemplate | null — шаблон активного чата
-// tempTemplateId: string | null  — выбор шаблона ДО создания чата
 // lastTemplateId: string | null  — глобальный «последний используемый»
 //   шаблон. In-memory состояние уровня UI (как drafts): при
 //   перезагрузке приложения сбрасывается. Пишется в трех случаях:
@@ -225,9 +224,9 @@ sendMessage(chatId: string | null, text: string): Promise<void>
 //   2) отправка сообщения с шаблоном (use-chat-actions, после
 //      проверки ключа — сообщение реально уходит)
 //   3) создание нового шаблона (templates-store.addTemplate)
-//   Временный чат всегда стартует с этим шаблоном
-//   (setActiveChat(null) и clearLoadedChat подставляют его
-//   в tempTemplateId); выбрать другой можно в любой момент
+//   Временный чат читает его НАПРЯМУЮ (отдельного tempTemplateId
+//   больше нет — они дублировали друг друга); выбрать другой можно
+//   в любой момент
 // loadChatToken: number          — защита от гонок загрузки
 //
 // loadChat(chatId) — инкрементит токен, параллельно тянет
@@ -236,15 +235,12 @@ sendMessage(chatId: string | null, text: string): Promise<void>
 //   перетирает notes, дописанные после нее)
 // setChatTemplate(chatId, templateId) — БД + chats[] + activeTemplate
 //   + обновление lastTemplateId (сразу при выборе)
-// setTempTemplate(id) — выбор для временного чата + обновление
-//   lastTemplateId (сразу при выборе)
-// setLastTemplateId(id) — прямой writer для внешних сторов
-//   (отправка, создание шаблона)
+// setLastTemplateId(id) — writer для временного чата (выбор в
+//   поповере) и внешних сторов (отправка, создание шаблона)
 // initTempChat(title, templateId) — createChat в БД, чат в список,
-//   становится активным, tempTemplateId сбрасывается, globalDraft очищается
+//   становится активным, globalDraft очищается
 // appendLocalNote(note) — push в activeNotes
-// clearLoadedChat() — сброс при уходе во временный чат,
-//   tempTemplateId = lastTemplateId
+// clearLoadedChat() — сброс при уходе во временный чат
 // deleteChat — теперь еще чистит activeNotes/activeTemplate удаленного чата
 ```
 
@@ -274,7 +270,7 @@ sendMessage(chatId: string | null, text: string): Promise<void>
 **Список сообщений** (`ChatMessages.tsx`, встроен в `ChatContent`
 вместо TODO-заглушки) — `ScrollView` с пузырями: user справа на акценте,
 assistant слева на карточке. Стриминговое сообщение — растущий текст с
-курсором `▍`. Ошибка — серая строка по центру (не пузырь, в БД не пишется).
+курсором `▍`. Ошибка — серая строка по центру (не пузырь, в БД не пише��ся).
 Автопрокрутка вниз на каждое изменение.
 
 ## 5. Поток данных

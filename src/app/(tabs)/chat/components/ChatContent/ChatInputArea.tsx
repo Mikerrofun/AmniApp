@@ -36,9 +36,9 @@ export function ChatInputArea({ chatId }: ChatInputAreaProps) {
   const templates = useTemplatesStore((state) => state.templates);
   const loadTemplates = useTemplatesStore((state) => state.loadTemplates);
   const activeTemplate = useChatsStore((state) => state.activeTemplate);
-  const tempTemplateId = useChatsStore((state) => state.tempTemplateId);
+  const lastTemplateId = useChatsStore((state) => state.lastTemplateId);
   const setChatTemplate = useChatsStore((state) => state.setChatTemplate);
-  const setTempTemplate = useChatsStore((state) => state.setTempTemplate);
+  const setLastTemplateId = useChatsStore((state) => state.setLastTemplateId);
   const generationStatus = useGenerationStore((state) => state.status);
 
   const inputRef = useRef<TextInput>(null);
@@ -56,10 +56,12 @@ export function ChatInputArea({ chatId }: ChatInputAreaProps) {
     void loadTemplates();
   }, [loadTemplates]);
 
+  // Выбранный шаблон: у существующего чата — из loadChat,
+  // у временного — глобальный «последний используемый»
   const selectedTemplate =
     chatId !== null
       ? activeTemplate
-      : (templates.find((tpl) => tpl.id === tempTemplateId) ?? null);
+      : (templates.find((tpl) => tpl.id === lastTemplateId) ?? null);
   const hasTemplate = selectedTemplate !== null;
   const isStreaming = generationStatus === "streaming";
   const canSend = hasTemplate && draft.trim() !== "" && !isStreaming;
@@ -88,7 +90,8 @@ export function ChatInputArea({ chatId }: ChatInputAreaProps) {
     setIsPickerOpen(false);
 
     if (chatId === null) {
-      setTempTemplate(templateId);
+      // Во временном чате выбор = «последний используемый»
+      setLastTemplateId(templateId);
     } else {
       void setChatTemplate(chatId, templateId);
     }

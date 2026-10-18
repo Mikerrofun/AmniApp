@@ -41,8 +41,6 @@ export type ChatsState = {
   activeNotes: NoteRecord[];
   /** Шаблон, привязанный к активному чату (null — временный чат или без шаблона) */
   activeTemplate: ApiTemplate | null;
-  /** Шаблон, выбранный для временного чата до его создания */
-  tempTemplateId: string | null;
   /**
    * Глобальный «последний используемый» шаблон: in-memory состояние
    * уровня UI (как drafts), при перезагрузке приложения сбрасывается.
@@ -72,9 +70,7 @@ export type ChatsState = {
   loadChat: (chatId: string) => Promise<void>;
   /** Выбирает шаблон для существующего чата (стора + БД) */
   setChatTemplate: (chatId: string, templateId: string | null) => Promise<void>;
-  /** Выбирает шаблон для временного чата (до его создания) */
-  setTempTemplate: (templateId: string | null) => void;
-  /** Пишет глобальный «последний используемый» шаблон (отправка, создание) */
+  /** Пишет глобальный «последний используемый» шаблон (выбор, отправка, создание) */
   setLastTemplateId: (templateId: string) => void;
   /**
    * Инициализирует временный чат при первой отправке: пишет в БД,
