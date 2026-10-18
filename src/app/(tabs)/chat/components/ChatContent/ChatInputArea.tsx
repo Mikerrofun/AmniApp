@@ -1,18 +1,6 @@
-import { Check, KeyRound, Plus } from "lucide-react-native";
-import { useEffect, useRef, useState } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { KeyRound, Plus } from "lucide-react-native";
+import { Pressable, TextInput, View } from "react-native";
 
-import { useTemplatesStore } from "@/features/api-templates";
-import {
-  useChatActions,
-  useChatDraft,
-  useChatsStore,
-  useGenerationStore,
-} from "@/features/chats";
-import {
-  PopoverMenu,
-  usePopoverAnchor,
-} from "@/shared/components/ui/PopoverMenu";
 import {
   ScrollIndicator,
   useScrollIndicator,
@@ -21,124 +9,43 @@ import { colors } from "@/shared/config/colors";
 import { useT } from "@/shared/i18n";
 
 import type { ChatInputAreaProps } from "./ChatInputArea.types";
-
-const TEMPLATE_POPOVER_WIDTH = 240;
+import { TemplatePickerPopover } from "./TemplatePickerPopover";
+import { useChatInput } from "./useChatInput";
 
 /**
  * Поле ввода. Видно всегда — и когда чат выбран, и когда нет
  * (временный чат, chatId = null). Текст = черновик в памяти стора.
+ * Логика — в useChatInput, пикер шаблона — TemplatePickerPopover.
  */
 export function ChatInputArea({ chatId }: ChatInputAreaProps) {
   const t = useT();
-  const { draft, handleChange } = useChatDraft(chatId);
-  const { sendMessage } = useChatActions();
-
-  const templates = useTemplatesStore((state) => state.templates);
-  const loadTemplates = useTemplatesStore((state) => state.loadTemplates);
-  const activeTemplate = useChatsStore((state) => state.activeTemplate);
-  const lastTemplateId = useChatsStore((state) => state.lastTemplateId);
-  const setChatTemplate = useChatsStore((state) => state.setChatTemplate);
-  const setLastTemplateId = useChatsStore((state) => state.setLastTemplateId);
-  const generationStatus = useGenerationStore((state) => state.status);
-
-  const inputRef = useRef<TextInput>(null);
-  const focusChatId = useChatsStore((state) => state.focusChatId);
-  const consumeFocusChat = useChatsStore((state) => state.consumeFocusChat);
-  const focusInputToken = useChatsStore((state) => state.focusInputToken);
-  const lastFocusTokenRef = useRef(focusInputToken);
-
   const scroll = useScrollIndicator({ verticalPadding: 4 });
 
-  const { anchorRef, anchor, measure } = usePopoverAnchor();
-  const [isPickerOpen, setIsPickerOpen] = useState(false);
-
-  useEffect(() => {
-    void loadTemplates();
-  }, [loadTemplates]);
-
-  const selectedTemplate =
-    chatId !== null
-      ? activeTemplate
-      : (templates.find((tpl) => tpl.id === lastTemplateId) ?? null);
-  const hasTemplate = selectedTemplate !== null;
-  const isStreaming = generationStatus === "streaming";
-  const canSend = hasTemplate && draft.trim() !== "" && !isStreaming;
-
-  useEffect(() => {
-    if (chatId !== null && focusChatId === chatId) {
-      consumeFocusChat(chatId);
-      inputRef.current?.focus();
-    }
-  }, [focusChatId, chatId, consumeFocusChat]);
-
-  // Фокус поля временного чата
-  useEffect(() => {
-    if (focusInputToken === lastFocusTokenRef.current) return;
-
-    lastFocusTokenRef.current = focusInputToken;
-    inputRef.current?.focus();
-  }, [focusInputToken]);
-
-  const handleOpenPicker = () => {
-    measure();
-    setIsPickerOpen(true);
-  };
-
-  const handleSelectTemplate = (templateId: string) => {
-    setIsPickerOpen(false);
-
-    if (chatId === null) {
-      // Во временном чате выбор = «последний используемый»
-      setLastTemplateId(templateId);
-    } else {
-      void setChatTemplate(chatId, templateId);
-    }
-  };
-
-  const handleSend = () => {
-    if (!canSend) return;
-
-    void sendMessage(chatId, draft);
-  };
+  const {
+    draft,
+    handleChange,
+    inputRef,
+    selectedTemplate,
+    hasTemplate,
+    canSend,
+    isPickerOpen,
+    anchorRef,
+    anchor,
+    handleOpenPicker,
+    handleClosePicker,
+    handleSelectTemplate,
+    handleSend,
+  } = useChatInput(chatId);
 
   return (
     <View className="px-4 pb-3">
-      <PopoverMenu
+      <TemplatePickerPopover
         open={isPickerOpen}
-        onClose={() => setIsPickerOpen(false)}
+        onClose={handleClosePicker}
         anchor={anchor}
-        width={TEMPLATE_POPOVER_WIDTH}
-      >
-        {templates.length === 0 ? (
-          <Text className="px-3 py-2 text-sm text-text-muted">
-            {t("chatInput.noTemplates")}
-          </Text>
-        ) : (
-          templates.map((template) => {
-            const isSelected = template.id === selectedTemplate?.id;
-
-            return (
-              <Pressable
-                key={template.id}
-                accessibilityRole="button"
-                accessibilityLabel={t("chatInput.chooseTemplate")}
-                onPress={() => handleSelectTemplate(template.id)}
-                className="flex-row items-center gap-2 px-3 py-2"
-              >
-                <View className="min-w-0 flex-1">
-                  <Text numberOfLines={1} className="text-sm text-text-primary">
-                    {template.name}
-                  </Text>
-                  <Text numberOfLines={1} className="text-xs text-text-muted">
-                    {template.model}
-                  </Text>
-                </View>
-                {isSelected && <Check size={14} color={colors.accent} />}
-              </Pressable>
-            );
-          })
-        )}
-      </PopoverMenu>
+        selectedTemplateId={selectedTemplate?.id ?? null}
+        onSelect={handleSelectTemplate}
+      />
 
       <View className="flex-row items-center gap-2 rounded-3xl border border-white/10 bg-white/5 p-2">
         {/* Мини-кнопка выбора шаблона API */}
