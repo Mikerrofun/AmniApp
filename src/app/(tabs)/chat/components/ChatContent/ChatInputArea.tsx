@@ -56,8 +56,6 @@ export function ChatInputArea({ chatId }: ChatInputAreaProps) {
     void loadTemplates();
   }, [loadTemplates]);
 
-  // Выбранный шаблон: у существующего чата — из loadChat,
-  // у временного — глобальный «последний используемый»
   const selectedTemplate =
     chatId !== null
       ? activeTemplate
