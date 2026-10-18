@@ -219,11 +219,15 @@ sendMessage(chatId: string | null, text: string): Promise<void>
 // activeTemplate: ApiTemplate | null — шаблон активного чата
 // tempTemplateId: string | null  — выбор шаблона ДО создания чата
 // lastTemplateId: string | null  — глобальный «последний используемый»
-//   шаблон: обновляется СРАЗУ при выборе в поповере, персистится
-//   в SecureStore (ключ 'last-template-id', src/features/chats/lib/
-//   last-template.ts) и переживает рестарт. Временный чат всегда
-//   стартует с этим шаблоном (setActiveChat(null) и clearLoadedChat
-//   подставляют его в tempTemplateId)
+//   шаблон. In-memory состояние уровня UI (как drafts): при
+//   перезагрузке приложения сбрасывается. Пишется в трех случаях:
+//   1) выбор шаблона в поповере (любой чат или временный чат)
+//   2) отправка сообщения с шаблоном (use-chat-actions, после
+//      проверки ключа — сообщение реально уходит)
+//   3) создание нового шаблона (templates-store.addTemplate)
+//   Временный чат всегда стартует с этим шаблоном
+//   (setActiveChat(null) и clearLoadedChat подставляют его
+//   в tempTemplateId); выбрать другой можно в любой момент
 // loadChatToken: number          — защита от гонок загрузки
 //
 // loadChat(chatId) — инкрементит токен, параллельно тянет
@@ -231,9 +235,11 @@ sendMessage(chatId: string | null, text: string): Promise<void>
 //   activeChatId и токен не изменились (ранняя загрузка не
 //   перетирает notes, дописанные после нее)
 // setChatTemplate(chatId, templateId) — БД + chats[] + activeTemplate
-//   + обновление lastTemplateId (персист сразу, без ожидания отправки)
+//   + обновление lastTemplateId (сразу при выборе)
 // setTempTemplate(id) — выбор для временного чата + обновление
-//   lastTemplateId (персист сразу)
+//   lastTemplateId (сразу при выборе)
+// setLastTemplateId(id) — прямой writer для внешних сторов
+//   (отправка, создание шаблона)
 // initTempChat(title, templateId) — createChat в БД, чат в список,
 //   становится активным, tempTemplateId сбрасывается, globalDraft очищается
 // appendLocalNote(note) — push в activeNotes
@@ -273,7 +279,7 @@ assistant слева на карточке. Стриминговое сообщ�
 
 ## 5. Поток данных
 
-Отправка сообщения (временный чат):
+Отправка сообще��ия (временный чат):
 
 ```
 Клик по кнопке отправки (canSend)
@@ -294,7 +300,7 @@ assistant слева на карточке. Стриминговое сообщ�
 ↓   embeddings-client → updateChatEmbedding(chatId, 'context', vector)
 ```
 
-Ошибка на любом шаге запроса:
+Ошибка на любом шаге з��проса:
 
 ```
 ChatCompletionError / network

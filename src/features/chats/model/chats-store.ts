@@ -2,8 +2,6 @@ import { create } from 'zustand';
 
 import * as chatsRepository from '@/lib/db';
 
-import { loadLastTemplateId, saveLastTemplateId } from '../lib/last-template';
-
 import type { ChatsState } from './chats-store.types';
 
 /**
@@ -30,13 +28,8 @@ export const useChatsStore = create<ChatsState>((set) => ({
     set({ isLoading: true });
 
     try {
-      // Гидрация глобального шаблона вместе со списком: к моменту
-      // открытия временного чата «последний шаблон» уже известен
-      const [chats, lastTemplateId] = await Promise.all([
-        chatsRepository.listChats(),
-        loadLastTemplateId(),
-      ]);
-      set({ chats, lastTemplateId, isLoading: false });
+      const chats = await chatsRepository.listChats();
+      set({ chats, isLoading: false });
     } catch {
       set({ isLoading: false });
     }
@@ -169,11 +162,6 @@ export const useChatsStore = create<ChatsState>((set) => ({
 
     await chatsRepository.setChatTemplate(chatId, templateId);
 
-    if (templateId !== null) {
-      // Выбор запоминается глобально сразу, без ожидания отправки
-      void saveLastTemplateId(templateId);
-    }
-
     set((state) => ({
       chats: state.chats.map((chat) =>
         chat.id === chatId ? { ...chat, templateId } : chat,
@@ -185,18 +173,20 @@ export const useChatsStore = create<ChatsState>((set) => ({
     }));
   },
 
-  setTempTemplate: (templateId) => {
-    if (templateId !== null) {
-      // Глобальный «последний шаблон» обновляется сразу при выборе
-      void saveLastTemplateId(templateId);
-    }
-
+  setTempTemplate: (templateId) =>
     set((state) => ({
       tempTemplateId: templateId,
       lastTemplateId:
         templateId !== null ? templateId : state.lastTemplateId,
-    }));
-  },
+    })),
+
+  /**
+   * Глобальный «последний используемый» шаблон. In-memory состояние
+   * уровня UI (как drafts): пишется при выборе в поповере, при отправке
+   * с шаблоном и при создании шаблона; при перезагрузке приложения
+   * сбрасывается. Временный чат стартует с этим шаблоном.
+   */
+  setLastTemplateId: (templateId) => set({ lastTemplateId: templateId }),
 
   initTempChat: async (title, templateId) => {
     const template = templateId
