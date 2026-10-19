@@ -1,8 +1,8 @@
 import { ScrollView, Text } from "react-native";
 
+import { useT } from "@/shared/i18n";
 import { TemplateForm } from "./api/components/TemplateForm";
 import { TemplateList } from "./api/components/TemplateList";
-import { useT } from "@/shared/i18n";
 
 /**
  * Вкладка API: CRUD шаблонов. Тонкий экран — только заголовки и
