@@ -38,6 +38,9 @@ export function ChatMessages() {
   const clearLoadedChat = useChatsStore((state) => state.clearLoadedChat);
   const status = useGenerationStore((state) => state.status);
   const generationChatId = useGenerationStore((state) => state.chatId);
+  const pendingUserText = useGenerationStore(
+    (state) => state.pendingUserText,
+  );
   const streamingText = useGenerationStore((state) => state.streamingText);
   const errorText = useGenerationStore((state) => state.errorText);
 
@@ -58,8 +61,10 @@ export function ChatMessages() {
     void loadChat(activeChatId);
   }, [activeChatId, loadChat, clearLoadedChat]);
 
-  const isCurrentGeneration =
-    activeChatId !== null && generationChatId === activeChatId;
+  // null === null — генерация для временного чата (его еще нет в БД)
+  const isCurrentGeneration = generationChatId === activeChatId;
+  const showPending =
+    isCurrentGeneration && status !== "error" && pendingUserText !== null;
   const showStreaming =
     isCurrentGeneration && status === "streaming" && streamingText !== "";
   const showError =
@@ -67,7 +72,7 @@ export function ChatMessages() {
 
   useEffect(() => {
     listRef.current?.scrollToEnd({ animated: true });
-  }, [activeNotes.length, streamingText, showError]);
+  }, [activeNotes.length, showPending, streamingText, showError]);
 
   return (
     <ScrollView
@@ -83,6 +88,11 @@ export function ChatMessages() {
       {activeNotes.map((note) => (
         <MessageBubble key={note.id} role={note.role} text={note.text} />
       ))}
+
+      {/* Оптимистичное сообщение юзера: в БД попадет только при успехе */}
+      {showPending && (
+        <MessageBubble role="user" text={pendingUserText ?? ""} />
+      )}
 
       {showStreaming && (
         <MessageBubble role="assistant" text={streamingText} streaming />

@@ -28,6 +28,7 @@ export function useChatActions() {
   const setPinned = useChatsStore((state) => state.setPinned);
   const deleteChat = useChatsStore((state) => state.deleteChat);
   const setDraft = useChatsStore((state) => state.setDraft);
+  const setGlobalDraft = useChatsStore((state) => state.setGlobalDraft);
   const initTempChat = useChatsStore((state) => state.initTempChat);
   const appendLocalNote = useChatsStore((state) => state.appendLocalNote);
 
@@ -51,9 +52,10 @@ export function useChatActions() {
   );
 
   /**
-   * Отправка сообщения. chatId === null — временный чат: он
-   * инициализируется при отправке (id + title-заглушка) до запроса,
-   * независимо от результата.
+   * Отправка сообщения. Оптимистичный UI: сообщение юзера показывается
+   * сразу, в БД ничего не пишется до успешного стрима. Временный чат
+   * создается тоже только после успеха — неудачная отправка не оставляет
+   * следов ни в БД, ни в списке чатов.
    */
   const sendMessage = useCallback(
     async (chatId: string | null, text: string) => {
@@ -61,8 +63,30 @@ export function useChatActions() {
 
       if (trimmed === '') return;
 
-      // Повторная отправка во время стриминга заблокирована
-      if (useGenerationStore.getState().status === 'streaming') return;
+      const generation = useGenerationStore.getState();
+
+      // Повторная отправка во время стриминга или ожидания заблокирована
+      if (
+        generation.status === 'streaming' ||
+        generation.pendingUserText !== null
+      ) {
+        return;
+      }
+
+      // Оптимистичное сообщение юзера — в UI мгновенно
+      generation.setPendingUser(trimmed);
+
+      const rollbackUi = () => {
+        useGenerationStore.getState().setPendingUser(null);
+        // Текст возвращается в инпут — отправку можно повторить
+        if (chatId === null) {
+          if (useChatsStore.getState().activeChatId === null) {
+            setGlobalDraft(trimmed);
+          }
+        } else {
+          setDraft(chatId, trimmed);
+        }
+      };
 
       const chatsState = useChatsStore.getState();
       // У временного чата нет своего шаблона — используется последний
@@ -72,6 +96,7 @@ export function useChatActions() {
         : chatsState.lastTemplateId;
 
       if (!templateId) {
+        rollbackUi();
         showToast(t('chatInput.selectTemplate'));
         return;
       }
@@ -79,6 +104,7 @@ export function useChatActions() {
       const template = await getTemplate(templateId);
 
       if (!template) {
+        rollbackUi();
         showToast(t('chatInput.templateMissing'));
         return;
       }
@@ -87,6 +113,7 @@ export function useChatActions() {
       const apiKey = await getTemplateKey(template.id);
 
       if (!apiKey) {
+        rollbackUi();
         showToast(t('chatInput.templateKeyMissing'));
         return;
       }
@@ -95,34 +122,23 @@ export function useChatActions() {
       // как «последний используемый» (in-memory, как drafts)
       useChatsStore.getState().setLastTemplateId(templateId);
 
-      let targetChatId = chatId;
-
-      if (targetChatId === null) {
-        const chat = await initTempChat(
-          t('chats.newChatDefaultTitle'),
-          templateId,
-        );
-        targetChatId = chat.id;
+      // Текст уходит — черновик очищается сразу
+      if (chatId === null) {
+        setGlobalDraft('');
       } else {
-        // Текст уходит — черновик очищается сразу
-        setDraft(targetChatId, '');
+        setDraft(chatId, '');
       }
 
-      // Сообщение юзера: в БД и сразу в UI
-      const userNote = await appendNote(targetChatId, 'user', trimmed);
+      // История для запроса: notes из БД + новое сообщение из памяти
+      // (в БД оно попадет только после успешного стрима)
+      const notes = chatId === null ? [] : await getNotes(chatId);
+      const messages = [
+        ...notes.map((note) => ({ role: note.role, content: note.text })),
+        { role: 'user' as const, content: trimmed },
+      ];
 
-      if (useChatsStore.getState().activeChatId === targetChatId) {
-        appendLocalNote(userNote);
-      }
-
-      // Контекст = все notes чата по возрастанию (включая новое сообщение)
-      const notes = await getNotes(targetChatId);
-      const messages = notes.map((note) => ({
-        role: note.role,
-        content: note.text,
-      }));
-
-      useGenerationStore.getState().start(targetChatId);
+      // chatId null — генерация для временного чата (его еще нет в БД)
+      useGenerationStore.getState().start(chatId);
 
       try {
         const fullText = await streamChatCompletion(
@@ -135,6 +151,18 @@ export function useChatActions() {
           (accumulated) => useGenerationStore.getState().appendChunk(accumulated),
         );
 
+        // Успех: только теперь создаем временный чат и пишем обе notes
+        let targetChatId = chatId;
+
+        if (targetChatId === null) {
+          const chat = await initTempChat(
+            t('chats.newChatDefaultTitle'),
+            templateId,
+          );
+          targetChatId = chat.id;
+        }
+
+        const userNote = await appendNote(targetChatId, 'user', trimmed);
         const assistantNote = await appendNote(
           targetChatId,
           'assistant',
@@ -142,6 +170,7 @@ export function useChatActions() {
         );
 
         if (useChatsStore.getState().activeChatId === targetChatId) {
+          appendLocalNote(userNote);
           appendLocalNote(assistantNote);
         }
 
@@ -159,13 +188,14 @@ export function useChatActions() {
             ? error.message
             : t('chatInput.requestFailed');
 
-        // Ничего не пишем в notes/context/эмбеддинги: тост + временное
-        // системное сообщение в чате (в БД не попадает)
+        // Ничего не пишем в notes/context/эмбеддинги: оптимистичное
+        // сообщение откатывается, тост + временное сообщение об ошибке
         useGenerationStore.getState().fail(message);
+        rollbackUi();
         showToast(message);
       }
     },
-    [appendLocalNote, initTempChat, setDraft, t],
+    [appendLocalNote, initTempChat, setDraft, setGlobalDraft, t],
   );
 
   return {

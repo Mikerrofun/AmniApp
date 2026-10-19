@@ -28,6 +28,9 @@ export function useChatInput(chatId: string | null) {
   const setChatTemplate = useChatsStore((state) => state.setChatTemplate);
   const setLastTemplateId = useChatsStore((state) => state.setLastTemplateId);
   const generationStatus = useGenerationStore((state) => state.status);
+  const pendingUserText = useGenerationStore(
+    (state) => state.pendingUserText,
+  );
 
   const inputRef = useRef<TextInput>(null);
   const focusChatId = useChatsStore((state) => state.focusChatId);
@@ -49,7 +52,9 @@ export function useChatInput(chatId: string | null) {
       ? activeTemplate
       : (templates.find((tpl) => tpl.id === lastTemplateId) ?? null);
   const hasTemplate = selectedTemplate !== null;
-  const isStreaming = generationStatus === "streaming";
+  // Блокируем отправку и на стриминге, и в оптимистичной фазе до него
+  const isStreaming =
+    generationStatus === "streaming" || pendingUserText !== null;
   const canSend = hasTemplate && draft.trim() !== "" && !isStreaming;
 
   useEffect(() => {
