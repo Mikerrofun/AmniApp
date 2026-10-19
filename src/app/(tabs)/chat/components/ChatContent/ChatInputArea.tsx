@@ -1,8 +1,6 @@
-import { Send } from "lucide-react-native";
-import { useEffect, useRef } from "react";
+import { KeyRound, Plus } from "lucide-react-native";
 import { Pressable, TextInput, View } from "react-native";
 
-import { useChatDraft, useChatsStore } from "@/features/chats";
 import {
   ScrollIndicator,
   useScrollIndicator,
@@ -11,45 +9,58 @@ import { colors } from "@/shared/config/colors";
 import { useT } from "@/shared/i18n";
 
 import type { ChatInputAreaProps } from "./ChatInputArea.types";
+import { TemplatePickerPopover } from "./TemplatePickerPopover";
+import { useChatInput } from "./useChatInput";
 
 /**
  * Поле ввода. Видно всегда — и когда чат выбран, и когда нет
- * (временный чат, chatId = null). Текст = черновик в памяти стора:
- * переживает переключение чатов и вкладок, стирается при рестарте.
- * Кнопка отправки — визуальная (disabled): отправка сообщений не входит
- * в эту итерацию.
+ * (временный чат, chatId = null). Текст = черновик в памяти стора.
+ * Логика — в useChatInput, пикер шаблона — TemplatePickerPopover.
  */
 export function ChatInputArea({ chatId }: ChatInputAreaProps) {
   const t = useT();
-  const { draft, handleChange } = useChatDraft(chatId);
-
-  const inputRef = useRef<TextInput>(null);
-  const focusChatId = useChatsStore((state) => state.focusChatId);
-  const consumeFocusChat = useChatsStore((state) => state.consumeFocusChat);
-  const focusInputToken = useChatsStore((state) => state.focusInputToken);
-  const lastFocusTokenRef = useRef(focusInputToken);
-
   const scroll = useScrollIndicator({ verticalPadding: 4 });
 
-  // Фокус после создания чата
-  useEffect(() => {
-    if (chatId !== null && focusChatId === chatId) {
-      consumeFocusChat(chatId);
-      inputRef.current?.focus();
-    }
-  }, [focusChatId, chatId, consumeFocusChat]);
-
-  // Фокус поля временного чата
-  useEffect(() => {
-    if (focusInputToken === lastFocusTokenRef.current) return;
-
-    lastFocusTokenRef.current = focusInputToken;
-    inputRef.current?.focus();
-  }, [focusInputToken]);
+  const {
+    draft,
+    handleChange,
+    inputRef,
+    selectedTemplate,
+    hasTemplate,
+    canSend,
+    isPickerOpen,
+    anchorRef,
+    anchor,
+    handleOpenPicker,
+    handleClosePicker,
+    handleSelectTemplate,
+    handleSend,
+  } = useChatInput(chatId);
 
   return (
     <View className="px-4 pb-3">
+      <TemplatePickerPopover
+        open={isPickerOpen}
+        onClose={handleClosePicker}
+        anchor={anchor}
+        selectedTemplateId={selectedTemplate?.id ?? null}
+        onSelect={handleSelectTemplate}
+      />
+
       <View className="flex-row items-center gap-2 rounded-3xl border border-white/10 bg-white/5 p-2">
+        {/* Мини-кнопка выбора шаблона API */}
+        <View className="h-9 w-9 items-center justify-center rounded-full bg-white/5">
+          <Pressable
+            ref={anchorRef}
+            accessibilityRole="button"
+            accessibilityLabel={t("chatInput.chooseTemplate")}
+            onPress={handleOpenPicker}
+            className="h-full w-full items-center justify-center"
+          >
+            <KeyRound size={16} color={colors.textMuted} />
+          </Pressable>
+        </View>
+
         <View className="relative min-w-0 flex-1">
           <TextInput
             ref={inputRef}
@@ -58,7 +69,12 @@ export function ChatInputArea({ chatId }: ChatInputAreaProps) {
             multiline
             scrollEnabled
             textAlignVertical="center"
-            placeholder={t("chatInput.placeholder")}
+            editable={hasTemplate}
+            placeholder={
+              hasTemplate
+                ? t("chatInput.placeholder")
+                : t("chatInput.selectTemplate")
+            }
             placeholderTextColor={colors.placeholder}
             onScroll={scroll.onScroll}
             onContentSizeChange={scroll.onContentSizeChange}
@@ -76,16 +92,26 @@ export function ChatInputArea({ chatId }: ChatInputAreaProps) {
           {/* Индикатор прокрутки слева: видно, сколько текста скрыто */}
           <ScrollIndicator style={scroll.thumbStyle} side="left" inset={1} />
         </View>
-        <View className="h-9 w-9 items-center justify-center rounded-3xl bg-white/5">
-          <Pressable
-            disabled
-            accessibilityRole="button"
-            accessibilityLabel={t("chatInput.send")}
-            className="h-full w-full items-center justify-center"
-          >
-            <Send size={16} color={colors.textMuted} />
-          </Pressable>
-        </View>
+
+        {/* Кнопка отправки: плюсик без шаблона, закрашенный кружок — с шаблоном */}
+        <Pressable
+          onPress={handleSend}
+          disabled={!canSend}
+          accessibilityRole="button"
+          accessibilityLabel={t("chatInput.send")}
+          accessibilityState={{ disabled: !canSend }}
+          className="h-9 w-9 items-center justify-center rounded-full bg-white/5"
+        >
+          {hasTemplate ? (
+            <View
+              className={`h-4 w-4 rounded-full ${
+                canSend ? "bg-accent" : "bg-white/20"
+              }`}
+            />
+          ) : (
+            <Plus size={16} color={colors.textMuted} />
+          )}
+        </Pressable>
       </View>
     </View>
   );

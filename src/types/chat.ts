@@ -3,16 +3,28 @@ export type ChatRecord = {
   id: string;
   title: string;
   isPinned: boolean;
+  /** Привязанный шаблон API; null — шаблон не выбран */
+  templateId: string | null;
   createdAt: number;
   updatedAt: number;
 };
 
-/** Сообщение чата (логики сообщений пока нет — таблица создана заранее) */
-export type ChatMessageRecord = {
+/** Контекст чата: одна строка = один контекст чата */
+export type ContextRecord = {
   id: string;
   chatId: string;
-  role: 'user' | 'assistant' | 'system';
-  content: string;
+  createdAt: number;
+};
+
+/** Роль автора записи контекста */
+export type NoteRole = 'user' | 'assistant';
+
+/** Запись контекста чата (роль автора — в notes, не в context) */
+export type NoteRecord = {
+  id: string;
+  contextId: string;
+  role: NoteRole;
+  text: string;
   createdAt: number;
 };
 
@@ -29,6 +41,8 @@ export type ChatRow = {
   title_embedding: string | null;
   /** JSON-вектор эмбединга контекста; NULL — задел на будущее */
   context_embedding: string | null;
+  /** Привязанный шаблон API; NULL — шаблон не выбран */
+  template_id: string | null;
 };
 
 /** Какой эмбединг чата сравнивается в embedding-поиске */

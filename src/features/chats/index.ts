@@ -1,5 +1,10 @@
 export { useChatsStore } from './model/chats-store';
 export type { ChatsState, SortDirection } from './model/chats-store.types';
+export { useGenerationStore } from './model/generation-store';
+export type {
+  GenerationState,
+  GenerationStatus,
+} from './model/generation-store.types';
 export { useChats } from './model/use-chats';
 export { useCreateChat } from './model/use-create-chat';
 export { useChatActions } from './model/use-chat-actions';
