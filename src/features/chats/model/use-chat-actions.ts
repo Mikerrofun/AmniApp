@@ -52,10 +52,10 @@ export function useChatActions() {
   );
 
   /**
-   * Отправка сообщения. Оптимистичный UI: сообщение юзера показывается
-   * сразу, в БД ничего не пишется до успешного стрима. Временный чат
-   * создается тоже только после успеха — неудачная отправка не оставляет
-   * следов ни в БД, ни в списке чатов.
+   * Отправка сообщения. Оптимистичный UI: пузырь юзера сразу, notes
+   * пишутся только после успешного стрима. Временный чат создается
+   * сразу при отправке (после валидации) — к нему можно вернуться из
+   * списка как к обычному чату; стрим переживает переключение чатов.
    */
   const sendMessage = useCallback(
     async (chatId: string | null, text: string) => {
@@ -76,9 +76,10 @@ export function useChatActions() {
       // Оптимистичное сообщение юзера — в UI мгновенно
       generation.setPendingUser(trimmed);
 
+      // Откат до создания чата: пузырь убирается, текст в инпут
       const rollbackUi = () => {
         useGenerationStore.getState().setPendingUser(null);
-        // Текст возвращается в инпут — отправку можно повторить
+
         if (chatId === null) {
           if (useChatsStore.getState().activeChatId === null) {
             setGlobalDraft(trimmed);
@@ -118,27 +119,35 @@ export function useChatActions() {
         return;
       }
 
-      // Сообщение реально уходит этим шаблоном — запоминаем его
-      // как «последний используемый» (in-memory, как drafts)
+      // Шаблон использован — запоминаем независимо от исхода запроса
       useChatsStore.getState().setLastTemplateId(templateId);
 
-      // Текст уходит — черновик очищается сразу
+      // Текст уходит — черновик очищается
       if (chatId === null) {
         setGlobalDraft('');
       } else {
         setDraft(chatId, '');
       }
 
-      // История для запроса: notes из БД + новое сообщение из памяти
-      // (в БД оно попадет только после успешного стрима)
-      const notes = chatId === null ? [] : await getNotes(chatId);
+      // Временный чат становится обычным: создается сразу при отправке
+      let targetChatId = chatId;
+
+      if (targetChatId === null) {
+        const chat = await initTempChat(
+          t('chats.newChatDefaultTitle'),
+          templateId,
+        );
+        targetChatId = chat.id;
+      }
+
+      // История: notes из БД + новое сообщение из памяти (в БД после успеха)
+      const notes = await getNotes(targetChatId);
       const messages = [
         ...notes.map((note) => ({ role: note.role, content: note.text })),
         { role: 'user' as const, content: trimmed },
       ];
 
-      // chatId null — генерация для временного чата (его еще нет в БД)
-      useGenerationStore.getState().start(chatId);
+      useGenerationStore.getState().start(targetChatId);
 
       try {
         const fullText = await streamChatCompletion(
@@ -150,17 +159,6 @@ export function useChatActions() {
           },
           (accumulated) => useGenerationStore.getState().appendChunk(accumulated),
         );
-
-        // Успех: только теперь создаем временный чат и пишем обе notes
-        let targetChatId = chatId;
-
-        if (targetChatId === null) {
-          const chat = await initTempChat(
-            t('chats.newChatDefaultTitle'),
-            templateId,
-          );
-          targetChatId = chat.id;
-        }
 
         const userNote = await appendNote(targetChatId, 'user', trimmed);
         const assistantNote = await appendNote(
@@ -188,10 +186,10 @@ export function useChatActions() {
             ? error.message
             : t('chatInput.requestFailed');
 
-        // Ничего не пишем в notes/context/эмбеддинги: оптимистичное
-        // сообщение откатывается, тост + временное сообщение об ошибке
+        // notes/context/эмбеддинги не пишутся; текст юзера возвращается
+        // в draft созданного чата, плашка ошибки живет до ухода из чата
         useGenerationStore.getState().fail(message);
-        rollbackUi();
+        setDraft(targetChatId, trimmed);
         showToast(message);
       }
     },

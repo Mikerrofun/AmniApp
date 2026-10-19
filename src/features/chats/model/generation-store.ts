@@ -24,6 +24,11 @@ export const useGenerationStore = create<GenerationState>((set) => ({
   fail: (message) =>
     set({ status: 'error', errorText: message, pendingUserText: null }),
 
+  clearError: () =>
+    set((state) =>
+      state.status === 'error' ? { status: 'idle', errorText: null } : state,
+    ),
+
   finish: () =>
     set({
       status: 'idle',

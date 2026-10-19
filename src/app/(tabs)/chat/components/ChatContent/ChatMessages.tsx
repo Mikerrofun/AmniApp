@@ -47,10 +47,12 @@ export function ChatMessages() {
   const listRef = useRef<ScrollView>(null);
 
   useEffect(() => {
+    // Плашка ошибки не переживает смену чата; стрим при этом
+    // продолжает жить в фоне — сброса генерации при уходе нет
     const generation = useGenerationStore.getState();
 
-    if (generation.chatId !== activeChatId) {
-      generation.reset();
+    if (generation.status === 'error') {
+      generation.clearError();
     }
 
     if (activeChatId === null) {
@@ -61,14 +63,16 @@ export function ChatMessages() {
     void loadChat(activeChatId);
   }, [activeChatId, loadChat, clearLoadedChat]);
 
-  // null === null — генерация для временного чата (его еще нет в БД)
   const isCurrentGeneration = generationChatId === activeChatId;
+  // Оптимистичный пузырь виден и до start() — chatId еще null
   const showPending =
-    isCurrentGeneration && status !== "error" && pendingUserText !== null;
+    pendingUserText !== null &&
+    status !== 'error' &&
+    (isCurrentGeneration || generationChatId === null);
   const showStreaming =
-    isCurrentGeneration && status === "streaming" && streamingText !== "";
+    isCurrentGeneration && status === 'streaming' && streamingText !== '';
   const showError =
-    isCurrentGeneration && status === "error" && errorText !== null;
+    isCurrentGeneration && status === 'error' && errorText !== null;
 
   useEffect(() => {
     listRef.current?.scrollToEnd({ animated: true });

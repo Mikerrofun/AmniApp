@@ -165,7 +165,7 @@ chatCompletionErrorSchema  // { error?: { message? } } — тело ошибки
 sendMessage(chatId: string | null, text: string): Promise<void>
 ```
 
-Пошагово (оптимистичный UI: в БД пишем только после успешного стрима):
+Пошагово (оптимистичный UI: notes пишем только после успешного стрима):
 
 1. `trim` пустой → выход; `status === 'streaming'` или
    `pendingUserText !== null` → выход (повторная отправка заблокирована).
@@ -175,20 +175,26 @@ sendMessage(chatId: string | null, text: string): Promise<void>
    для временного — `lastTemplateId`. `getTemplate(id)`,
    `getTemplateKey(id)`. Любая неудача → `rollbackUi()`: оптимистичный
    пузырь убирается, текст возвращается в инпут, тост.
-4. История для запроса: `getNotes(chatId)` (для временного чата — пусто)
-   + новое сообщение **из памяти** (в БД его еще нет).
-5. `generationStore.start(chatId)` — `chatId null` для временного чата
-   (его еще нет в БД) → `streamChatCompletion(...)`, каждый колбэк →
-   `appendChunk(accumulated)` → UI растет токен-за-токеном.
-6. Успех: только теперь `chatId === null` → `initTempChat(title,
-   templateId)` (чат создается в БД и становится активным), затем
-   `appendNote(user)` + `appendNote(assistant)` → БД + `appendLocalNote`
-   в UI, `generationStore.finish()`, fire-and-forget
-   `updateChatContextData(chatId, "userText assistantText")`.
-7. Ошибка: **ничего не пишется** в notes/context/эмбеддинги, временный
-   чат не создается. `generationStore.fail(message)` — оптимистичный
-   пузырь откатывается, временное системное сообщение об ошибке в чате
-   (в БД не попадает) + тост + текст возвращается в инпут.
+4. `setLastTemplateId(templateId)` — шаблон использован, запоминаем
+   независимо от исхода запроса.
+5. Временный чат (`chatId === null`) → `initTempChat(title, templateId)`:
+   создается в БД **сразу при отправке** (после валидации), попадает
+   в список; активируется только если юзер все еще во временном чате.
+   Вернуться к нему можно как к любому обычному чату.
+6. История для запроса: `getNotes(chatId)` + новое сообщение **из
+   памяти** (в БД оно попадет только после успеха).
+7. `generationStore.start(chatId)` → `streamChatCompletion(...)`,
+   каждый колбэк → `appendChunk(accumulated)`. Стрим переживает
+   переключение чатов: UI гейтится `chatId === activeChatId`,
+   сброса генерации при уходе нет.
+8. Успех: `appendNote(user)` + `appendNote(assistant)` → БД +
+   `appendLocalNote` в UI (если чат активен), `generationStore.finish()`,
+   fire-and-forget `updateChatContextData(chatId, "userText assistantText")`.
+9. Ошибка: **ничего не пишется** в notes/context/эмбеддинги.
+   `generationStore.fail(message)` — оптимистичный пузырь откатывается,
+   серая строка ошибки в чате (в БД не попадает) + тост + текст юзера
+   возвращается в **draft созданного чата**. Плашка ошибки сбрасывается
+   при уходе из чата или следующей отправке.
 
 ```ts
 // src/features/chats/lib/update-context-embedding.ts
@@ -207,13 +213,14 @@ sendMessage(chatId: string | null, text: string): Promise<void>
 
 // src/features/chats/model/generation-store.ts (slim-стор)
 // status: 'idle' | 'streaming' | 'error'
-// chatId: string | null   — чат, которому принадлежит стрим/ошибка;
-//   null = временный чат (создается в БД только после успеха)
+// chatId: string | null   — чат, которому принадлежит стрим/ошибка
 // pendingUserText: string | null — оптимистичное сообщение юзера:
 //   в UI сразу при отправке, в БД — только при успехе; fail() откатывает
 // streamingText, errorText
 // setPendingUser(text) / start(chatId) / appendChunk(accumulated) /
-// finish() / fail(msg) / reset()
+// finish() / fail(msg) / clearError() / reset()
+// Стрим НЕ сбрасывается при смене чата — живет в фоне; clearError()
+// сбрасывает только плашку ошибки (уход из чата)
 ```
 
 Расширение `chats-store`:
@@ -242,8 +249,9 @@ sendMessage(chatId: string | null, text: string): Promise<void>
 //   + обновление lastTemplateId (сразу при выборе)
 // setLastTemplateId(id) — writer для временного чата (выбор в
 //   поповере) и внешних сторов (отправка, создание шаблона)
-// initTempChat(title, templateId) — createChat в БД, чат в список,
-//   становится активным, globalDraft очищается
+// initTempChat(title, templateId) — вызывается при отправке во
+//   временный чат: createChat в БД, чат в список; активируется только
+//   если юзер все еще во временном чате, globalDraft очищается
 // appendLocalNote(note) — push в activeNotes
 // clearLoadedChat() — сброс при уходе во временный чат
 // deleteChat — теперь еще чистит activeNotes/activeTemplate удаленного чата
@@ -264,8 +272,8 @@ sendMessage(chatId: string | null, text: string): Promise<void>
 **Выбор шаблона в чате** (`ChatInputArea.tsx`) — мини-кнопка с иконкой
 ключа слева от инпута открывает `PopoverMenu` со списком шаблонов
 (имя + модель, галочка у выбранного). Для существующего чата выбор идет
-в `setChatTemplate` (БД + стор), для временного — в `setTempTemplate`
-(только стор, переедет в чат при первой отправке).
+в `setChatTemplate` (БД + стор), для временного — в `setLastTemplateId`
+(только стор, уедет в чат при первой отправке).
 
 Без шаблона: инпут `editable={false}` с плейсхолдером-подсказкой,
 у кнопки отправки нейтральный плюсик. С шаблоном: закрашенный кружок
@@ -286,17 +294,19 @@ assistant слева на карточке. Стриминговое сообщ�
 Клик по кнопке отправки (canSend)
 ↓ sendMessage(null, draft)
 ↓ generationStore.setPendingUser(text) → пузырь юзера в UI мгновенно
-↓   (черновик очищен; БД пока не тронута)
 ↓ getTemplate(lastTemplateId) → getTemplateKey → SecureStore
 ↓   (неудача → rollbackUi: пузырь убран, текст вернулся в инпут, тост)
-↓ getNotes не нужен (чата еще нет) → messages = [user text]
-↓ generationStore.start(null) — chatId null = временный чат
+↓ setLastTemplateId(templateId)
+↓ initTempChat(title, templateId) → createChat в БД → чат в списке,
+↓   активен (юзер в нем и сидит) — вернуться можно в любой момент
+↓ messages = [user text] (notes еще пусты)
+↓ generationStore.start(chatId)
 ↓ streamChatCompletion(config, onText)
 ↓   fetch POST {baseUrl}/chat/completions (stream: true)
 ↓   reader.read() → TextDecoder → parseSseDataLines → zod → delta.content
 ↓   onText(accumulated) → generationStore.appendChunk → ChatMessages (▍)
-↓ [DONE] → initTempChat(title, templateId) → createChat в БД → chats-store
-↓         → appendNote(user) + appendNote(assistant) → БД + UI
+↓   (стрим переживает переключение чатов — живет в фоне)
+↓ [DONE] → appendNote(user) + appendNote(assistant) → БД + UI
 ↓ generationStore.finish()
 ↓ updateChatContextData(chatId, "user assistant") — fire-and-forget
 ↓   appendToChatContext → chats.context → FTS-триггер chats_au
@@ -309,9 +319,10 @@ assistant слева на карточке. Стриминговое сообщ�
 ChatCompletionError / network
 ↓ generationStore.fail(message) → оптимистичный пузырь юзера откатился,
 ↓   серая строка ошибки в чате (не в БД)
-↓ rollbackUi() → текст вернулся в инпут
+↓ setDraft(chatId, text) → текст юзера в draft созданного чата
 ↓ showToast(message)
-↓ notes/context/эмбеддинги/чаты не тронуты — повторная отправка чистая
+↓ notes/context/эмбеддинги не тронуты; плашка ошибки сбрасывается
+↓   при уходе из чата или следующей отправке
 ```
 
 Ошибка на любом шаге з��проса:
@@ -319,6 +330,7 @@ ChatCompletionError / network
 ```
 ChatCompletionError / network
 ↓ generationStore.fail(message) → серая строка в чате (не в БД)
+↓ setDraft(chatId, text) → текст юзера вернулся в draft чата
 ↓ showToast(message)
 ↓ notes/context/эмбеддинги не тронуты — повторная отправка чистая
 ```
@@ -328,7 +340,8 @@ ChatCompletionError / network
 ```
 Клик по чату в сайдбаре
 ↓ setActiveChat(id)
-↓ ChatMessages.useEffect: generation.chatId !== activeChatId → reset()
+↓ ChatMessages.useEffect: status === 'error' → clearError()
+↓   (стрим, если идет, продолжает жить в фоне)
 ↓ loadChat(chatId) → loadChatToken++
 ↓   Promise.all([getNotes(chatId), getTemplateForChat(chatId)])
 ↓   activeChatId и токен не изменились → activeNotes + activeTemplate
@@ -355,13 +368,15 @@ ChatCompletionError / network
 2. **Ручной SSE-парсинг вместо библиотеки** — `expo/fetch` дает нативный
    стриминг, протокол OpenAI SSE тривиален (`data:` / `[DONE]`); zod на
    чанках дает устойчивость к мусору в потоке без зависимости на SDK.
-3. **Временный чат создается до запроса, а не после** — если запрос упадет,
-   черновик и сообщение юзера не теряются: чат уже в списке и в БД.
-   Альтернатива (создавать после успешного ответа) теряла бы текст.
+3. **Временный чат создается при отправке, а не после ответа** — чат
+   сразу появляется в списке, к нему можно вернуться как к обычному;
+   стрим переживает переключение чатов. notes пишутся только после
+   успешного стрима — неудавшийся запрос не оставляет «одиноких»
+   сообщений без ответа, текст юзера возвращается в draft чата.
 4. **Ошибка — временное сообщение в сторе, а не запись в notes** —
    неудавшийся запрос не должен попадать в контекст, который уйдет в
-   следующий запрос к API. `generation.chatId` гарантирует, что стрим/
-   ошибка не показываются в другом чате после переключения.
+   следующий запрос к API. Плашка ошибки сбрасывается при уходе из
+   чата — «вечной» ошибки, которую нельзя убрать, нет.
 5. **`context`/`notes` вместо возврата к `messages`** — поиск уже построен
    вокруг `chats.context` (FTS + embedding); notes дают историю для API,
    context — денормализованную сводку для поиска, обе сущности каскадно

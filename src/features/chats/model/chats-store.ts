@@ -170,14 +170,20 @@ export const useChatsStore = create<ChatsState>((set) => ({
       : null;
     const chat = await chatsRepository.createChat(title, templateId);
 
-    set((state) => ({
-      chats: [chat, ...state.chats],
-      activeChatId: chat.id,
-      activeNotes: [],
-      activeTemplate: template,
-      // Черновик временного чата переезжать в новый чат не должен
-      globalDraft: "",
-    }));
+    set((state) => {
+      // Активируем только если юзер все еще во временном чате —
+      // иначе он уже ушел, и чат просто появится в списке
+      const isStillTemp = state.activeChatId === null;
+
+      return {
+        chats: [chat, ...state.chats],
+        activeChatId: isStillTemp ? chat.id : state.activeChatId,
+        activeNotes: isStillTemp ? [] : state.activeNotes,
+        activeTemplate: isStillTemp ? template : state.activeTemplate,
+        // Текст временного черновика «уходит» в отправку
+        globalDraft: '',
+      };
+    });
 
     return chat;
   },

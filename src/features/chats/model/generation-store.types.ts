@@ -28,6 +28,8 @@ export type GenerationState = {
   appendChunk: (accumulatedText: string) => void;
   /** Ошибка: оптимистичное сообщение откатывается из UI */
   fail: (message: string) => void;
+  /** Сбрасывает только плашку ошибки (уход из чата); стрим не трогает */
+  clearError: () => void;
   finish: () => void;
   reset: () => void;
 };
