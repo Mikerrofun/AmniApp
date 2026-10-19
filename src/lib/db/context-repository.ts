@@ -67,6 +67,12 @@ export async function appendNote(
   return note;
 }
 
+/** Удаляет запись контекста по id (откат при частично неудавшейся записи) */
+export async function deleteNote(noteId: string): Promise<void> {
+  const db = await openDb();
+  await db.runAsync('DELETE FROM notes WHERE id = ?', noteId);
+}
+
 /**
  * Все notes чата по возрастанию created_at (старые первыми) — это и есть
  * контекст для API и для loadChat. rowid — тай-брейк для записей,

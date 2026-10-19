@@ -20,6 +20,7 @@ export {
 export {
   ensureContext,
   appendNote,
+  deleteNote,
   getNotes,
   appendToChatContext,
 } from './context-repository';

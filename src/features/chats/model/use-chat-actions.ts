@@ -3,6 +3,7 @@ import { useCallback } from 'react';
 import { ChatCompletionError, streamChatCompletion } from '@/lib/ai/openai-compat-client';
 import {
   appendNote,
+  deleteNote,
   getNotes,
   getTemplate,
   getTemplateKey,
@@ -10,7 +11,7 @@ import {
 import { showToast } from '@/shared/components/ui/Toast';
 import { useT } from '@/shared/i18n';
 
-import type { ChatRecord } from '@/types/chat';
+import type { ChatRecord, NoteRecord } from '@/types/chat';
 
 import { updateChatContextData } from '../lib/update-context-embedding';
 import { updateTitleEmbedding } from '../lib/update-title-embedding';
@@ -160,12 +161,21 @@ export function useChatActions() {
           (accumulated) => useGenerationStore.getState().appendChunk(accumulated),
         );
 
+        // Пара пишется атомарно: если assistant не записался,
+        // user откатывается — в БД не бывает сообщения без ответа
         const userNote = await appendNote(targetChatId, 'user', trimmed);
-        const assistantNote = await appendNote(
-          targetChatId,
-          'assistant',
-          fullText,
-        );
+        let assistantNote: NoteRecord;
+
+        try {
+          assistantNote = await appendNote(
+            targetChatId,
+            'assistant',
+            fullText,
+          );
+        } catch (dbError: unknown) {
+          await deleteNote(userNote.id);
+          throw dbError;
+        }
 
         if (useChatsStore.getState().activeChatId === targetChatId) {
           appendLocalNote(userNote);

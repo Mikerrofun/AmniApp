@@ -187,9 +187,11 @@ sendMessage(chatId: string | null, text: string): Promise<void>
    каждый колбэк → `appendChunk(accumulated)`. Стрим переживает
    переключение чатов: UI гейтится `chatId === activeChatId`,
    сброса генерации при уходе нет.
-8. Успех: `appendNote(user)` + `appendNote(assistant)` → БД +
-   `appendLocalNote` в UI (если чат активен), `generationStore.finish()`,
-   fire-and-forget `updateChatContextData(chatId, "userText assistantText")`.
+8. Успех: `appendNote(user)` + `appendNote(assistant)` → БД (атомарно:
+   если assistant не записался, user откатывается через `deleteNote` —
+   в БД не бывает сообщения без ответа) + `appendLocalNote` в UI
+   (если чат активен), `generationStore.finish()`, fire-and-forget
+   `updateChatContextData(chatId, "userText assistantText")`.
 9. Ошибка: **ничего не пишется** в notes/context/эмбеддинги.
    `generationStore.fail(message)` — оптимистичный пузырь откатывается,
    серая строка ошибки в чате (в БД не попадает) + тост + текст юзера
