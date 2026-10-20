@@ -8,37 +8,73 @@ Mobile AI chat client built with React Native (Expo) — bring-your-own-key.
 - TypeScript (strict), Zod schemas
 - NativeWind (Tailwind syntax for React Native)
 - Zustand for client state
-- expo-secure-store for API keys, expo-sqlite for local chat history (planned)
+- expo-secure-store for API keys, expo-sqlite for local chat history
+- Cohere Embeddings API for semantic search
 
 ## Getting started
 
 ```bash
 pnpm install
+
+# Добавьте API ключи в .env (см. .env.example)
+# EXPO_PUBLIC_COHERE_API_KEY=your_key  # для поиска по чатам
+
 pnpm expo start
 ```
 
 Scan the QR code with Expo Go (Android) or the Camera app (iOS).
 
+## Features
+
+✅ **Чаты с AI моделями**
+
+- Поддержка OpenRouter и других OpenAI-совместимых провайдеров
+- Streaming ответов (SSE)
+- Сохранение истории в локальной БД (SQLite)
+- Черновики сообщений
+
+✅ **Поиск по чатам**
+
+- FTS5 keyword-поиск (всегда работает)
+- Semantic search через Cohere embeddings (опционально)
+- Векторный поиск по cosine similarity
+
+✅ **API Templates**
+
+- Безопасное хранение ключей (expo-secure-store)
+- Множественные шаблоны (провайдер + модель)
+- Выбор шаблона для каждого чата
+
+📖 **Документация:**
+
+- [Embeddings Setup](./EMBEDDINGS.md) - настройка поиска
+- [API Templates & Chat](./docs/features/api-templates-streaming-chat.md) - как работает чат
+
 ## Structure
 
 ```
 src/
-├── app/            # routes: (tabs)/chats, (tabs)/settings, chat/[id]
-├── components/     # ui/ primitives and chat/ widgets
-├── features/       # feature modules (chat, settings)
-├── lib/ai/         # provider registry, API client, streaming
-├── lib/db/         # local persistence (expo-sqlite repositories)
-├── schemas/        # zod schemas shared across the app
-├── stores/         # zustand stores
-├── hooks/          # shared hooks
-└── theme/          # design tokens
+├── app/            # routes: (tabs)/chats, (tabs)/settings, (tabs)/api
+├── features/       # feature modules (chats, api-templates)
+├── lib/
+│   ├── ai/         # provider clients, embeddings
+│   └── db/         # SQLite repositories, migrations
+├── schemas/        # zod schemas
+└── shared/         # ui, i18n, components
 ```
 
-## Roadmap
+## Environment Variables
 
-1. Settings screen: provider, API key, model, temperature (persisted)
-2. Streaming chat via provider APIs (SSE from the device)
-3. Local conversation history (expo-sqlite)
-4. Markdown rendering + code blocks
-5. Proxy base URL option for restricted regions
-6. Later: attachments, voice input, agent presets
+```bash
+# .env
+EXPO_PUBLIC_COHERE_API_KEY=cohere_...  # для embeddings (опционально)
+```
+
+API ключи для chat провайдеров хранятся в expo-secure-store через UI приложения.
+
+## Testing
+
+```bash
+# Проверка Cohere Embeddings API
+pnpm test:embeddings
+```

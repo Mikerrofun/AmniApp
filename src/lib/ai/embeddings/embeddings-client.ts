@@ -1,23 +1,24 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-import { EMBEDDINGS_BASE_URL, EMBEDDING_MODEL } from './embeddings.config';
+import { EMBEDDING_MODEL, EMBEDDINGS_BASE_URL } from "./embeddings.config";
 import type {
-  EmbeddingsClient,
-  EmbeddingsClientConfig,
-  EmbeddingVector,
-} from './embeddings.types';
+    EmbeddingsClient,
+    EmbeddingsClientConfig,
+    EmbeddingVector,
+} from "./embeddings.types";
 
-const embeddingsResponseSchema = z.object({
-  data: z.array(z.object({ embedding: z.array(z.number()) })),
+// Cohere API возвращает массив векторов в поле embeddings
+const cohereResponseSchema = z.object({
+  embeddings: z.array(z.array(z.number())),
 });
 
 /**
- * Ключ читается из env конфига (EXPO_PUBLIC_OPENROUTER_API_KEY —
+ * Ключ читается из env конфига (EXPO_PUBLIC_COHERE_API_KEY —
  * стандарт Expo для рантайм-доступных переменных); отсутствие
  * ключа — не ошибка.
  */
 function getApiKey(): string | null {
-  const apiKey = process.env.EXPO_PUBLIC_OPENROUTER_API_KEY;
+  const apiKey = process.env.EXPO_PUBLIC_COHERE_API_KEY;
 
   return apiKey ? apiKey : null;
 }
@@ -28,8 +29,8 @@ export function isEmbeddingsAvailable(): boolean {
 }
 
 /**
- * OpenAI-совместимый клиент POST /embeddings. Чистая функция поверх
- * fetch, поддержка AbortSignal для отмены устаревших запросов.
+ * Cohere Embed API клиент для embeddings.
+ * Чистая функция поверх fetch, поддержка AbortSignal для отмены устаревших запросов.
  */
 export function createEmbeddingsClient(
   config: EmbeddingsClientConfig,
@@ -38,23 +39,31 @@ export function createEmbeddingsClient(
     texts: string[],
     signal?: AbortSignal,
   ): Promise<EmbeddingVector[] | null> => {
-    const response = await fetch(`${config.baseUrl}/embeddings`, {
-      method: 'POST',
+    const response = await fetch(`${config.baseUrl}/embed`, {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         Authorization: `Bearer ${config.apiKey}`,
       },
-      body: JSON.stringify({ model: config.model, input: texts }),
+      body: JSON.stringify({
+        model: config.model,
+        texts: texts,
+        input_type: "search_document", // для индексации документов
+        embedding_types: ["float"], // получаем float векторы
+      }),
       signal,
     });
 
     if (!response.ok) {
-      throw new Error(`Embeddings request failed: ${response.status}`);
+      const errorText = await response.text();
+      throw new Error(
+        `Cohere embeddings request failed: ${response.status} - ${errorText}`,
+      );
     }
 
-    const parsed = embeddingsResponseSchema.parse(await response.json());
+    const parsed = cohereResponseSchema.parse(await response.json());
 
-    return parsed.data.map((item) => item.embedding);
+    return parsed.embeddings;
   };
 
   return { embed };
