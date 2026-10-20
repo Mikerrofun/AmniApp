@@ -1,5 +1,10 @@
 import { Trash2 } from "lucide-react-native";
 import { Pressable, Text, View } from "react-native";
+import Animated, {
+  FadeIn,
+  FadeOut,
+  LinearTransition,
+} from "react-native-reanimated";
 
 import { colors } from "@/shared/config/colors";
 import { useT } from "@/shared/i18n";
@@ -21,8 +26,11 @@ export function TemplateList() {
         <Text className="text-sm text-text-muted">{t("apiTab.empty")}</Text>
       ) : (
         templates.map((template) => (
-          <View
+          <Animated.View
             key={template.id}
+            layout={LinearTransition.duration(200)}
+            entering={FadeIn.duration(250)}
+            exiting={FadeOut.duration(200)}
             className="mb-2 flex-row items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2"
           >
             <View className="min-w-0 flex-1">
@@ -41,7 +49,7 @@ export function TemplateList() {
             >
               <Trash2 size={16} color={colors.textMuted} />
             </Pressable>
-          </View>
+          </Animated.View>
         ))
       )}
     </View>

@@ -9,6 +9,8 @@ import { useT } from "@/shared/i18n";
 import type { PopoverAnchor } from "@/shared/components/ui/PopoverMenu";
 
 const TEMPLATE_POPOVER_WIDTH = 240;
+/** Лимит высоты списка: дальше — внутренняя прокрутка с индикатором */
+const TEMPLATE_POPOVER_MAX_HEIGHT = 280;
 
 export type TemplatePickerPopoverProps = {
   open: boolean;
@@ -35,7 +37,16 @@ export function TemplatePickerPopover({
   const templates = useTemplatesStore((state) => state.templates);
 
   return (
-    <PopoverMenu open={open} onClose={onClose} anchor={anchor} width={TEMPLATE_POPOVER_WIDTH}>
+    <PopoverMenu
+      open={open}
+      onClose={onClose}
+      anchor={anchor}
+      /* Открывается над кнопкой-ключом: не перекрывается клавиатурой
+         и читается лучше, чем под кнопкой */
+      placement="top-end"
+      width={TEMPLATE_POPOVER_WIDTH}
+      maxHeight={TEMPLATE_POPOVER_MAX_HEIGHT}
+    >
       {templates.length === 0 ? (
         <Text className="px-3 py-2 text-sm text-text-muted">
           {t("chatInput.noTemplates")}

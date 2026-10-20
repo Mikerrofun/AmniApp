@@ -9,7 +9,7 @@ export type PopoverAnchor = {
 };
 
 /** Позиция popover'а относительно якоря */
-export type PopoverPlacement = 'bottom-start' | 'bottom-end';
+export type PopoverPlacement = 'bottom-start' | 'bottom-end' | 'top-end';
 
 export type PopoverMenuProps = {
   open: boolean;
@@ -19,5 +19,10 @@ export type PopoverMenuProps = {
   placement?: PopoverPlacement;
   /** Ширина popover'а, px */
   width?: number;
+  /**
+   * Максимальная высота контента, px. Превышение — внутренний ScrollView
+   * с ScrollIndicator. Без значения popover растёт по контенту.
+   */
+  maxHeight?: number;
   children: ReactNode;
 };

@@ -1,7 +1,15 @@
 import { useEffect, useRef } from "react";
 import { ScrollView, Text, View } from "react-native";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from "react-native-reanimated";
 
 import { useChatsStore, useGenerationStore } from "@/features/chats";
+import { colors } from "@/shared/config/colors";
 import { useT } from "@/shared/i18n";
 
 import type { MessageBubbleProps } from "./ChatMessages.types";
@@ -23,6 +31,40 @@ function MessageBubble({ role, text, streaming = false }: MessageBubbleProps) {
         {text}
         {streaming ? "▍" : ""}
       </Text>
+    </View>
+  );
+}
+
+/** Крутящийся кружок: стрим начался, но первый токен еще не пришел */
+function LoadingBubble() {
+  const rotation = useSharedValue(0);
+
+  useEffect(() => {
+    rotation.value = withRepeat(
+      withTiming(360, { duration: 900, easing: Easing.linear }),
+      -1,
+    );
+  }, [rotation]);
+
+  const spinnerStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${rotation.value}deg` }],
+  }));
+
+  return (
+    <View className="self-start rounded-2xl bg-white/5 px-3 py-2.5">
+      <Animated.View
+        style={[
+          {
+            width: 14,
+            height: 14,
+            borderRadius: 7,
+            borderWidth: 2,
+            borderColor: "rgba(255,255,255,0.15)",
+            borderTopColor: colors.accent,
+          },
+          spinnerStyle,
+        ]}
+      />
     </View>
   );
 }
@@ -71,12 +113,15 @@ export function ChatMessages() {
     (isCurrentGeneration || generationChatId === null);
   const showStreaming =
     isCurrentGeneration && status === 'streaming' && streamingText !== '';
+  // Стрим идет, но текста еще нет — показываем ожидание, чтобы не выглядело зависшим
+  const showLoading =
+    isCurrentGeneration && status === 'streaming' && streamingText === '';
   const showError =
     isCurrentGeneration && status === 'error' && errorText !== null;
 
   useEffect(() => {
     listRef.current?.scrollToEnd({ animated: true });
-  }, [activeNotes.length, showPending, streamingText, showError]);
+  }, [activeNotes.length, showPending, streamingText, showError, showLoading]);
 
   return (
     <ScrollView
@@ -97,6 +142,8 @@ export function ChatMessages() {
       {showPending && (
         <MessageBubble role="user" text={pendingUserText ?? ""} />
       )}
+
+      {showLoading && <LoadingBubble />}
 
       {showStreaming && (
         <MessageBubble role="assistant" text={streamingText} streaming />
