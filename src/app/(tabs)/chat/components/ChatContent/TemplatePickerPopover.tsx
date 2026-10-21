@@ -9,8 +9,12 @@ import { useT } from "@/shared/i18n";
 import type { PopoverAnchor } from "@/shared/components/ui/PopoverMenu";
 
 const TEMPLATE_POPOVER_WIDTH = 240;
-/** Лимит высоты списка: дальше — внутренняя прокрутка с индикатором */
-const TEMPLATE_POPOVER_MAX_HEIGHT = 280;
+/**
+ * Лимит высоты списка: дальше — внутренняя прокрутка с индикатором.
+ * Ровно 4 строки без прокрутки (строка ~52px: две строки текста 20+16
+ * + py-2), пятый шаблон уже прокручивается.
+ */
+const TEMPLATE_POPOVER_MAX_HEIGHT = 224;
 
 export type TemplatePickerPopoverProps = {
   open: boolean;

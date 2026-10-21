@@ -24,28 +24,31 @@ import type { PopoverMenuProps } from './PopoverMenu.types';
  * Закрытие: тап вне popover'а (все платформы), уход курсора (web),
  * кнопка назад (Android).
  *
+ * Контент монтируется только на время открытия: измерения высоты и
+ * shared values индикатора прокрутки не протекают между открытиями
+ * (иначе тумба остается в позиции прошлого скролла).
+ *
  * С maxHeight контент выше лимита скроллится, справа — ScrollIndicator.
  * Для top-placement высота измеряется onLayout'ом: первый кадр рендерится
  * с opacity 0 по оценке maxHeight, затем позиция уточняется.
  */
-export function PopoverMenu({
-  open,
+export function PopoverMenu({ open, ...content }: PopoverMenuProps) {
+  if (!open) return null;
+  return <PopoverMenuContent {...content} />;
+}
+
+function PopoverMenuContent({
   onClose,
   anchor,
   placement = 'bottom-end',
   width = POPOVER_DEFAULT_WIDTH,
   maxHeight,
   children,
-}: PopoverMenuProps) {
+}: Omit<PopoverMenuProps, 'open'>) {
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
-  // Измерение хранится вместе с флагом открытия: при смене open высота
-  // считается невалидной без эффекта (якорь и контент могут меняться)
-  const [measurement, setMeasurement] = useState<{
-    open: boolean;
-    height: number;
-  } | null>(null);
-  const contentHeight =
-    measurement && measurement.open === open ? measurement.height : null;
+  // Высота контента для позиционирования top-placement: до первого
+  // onLayout берём maxHeight как оценку (первый кадр — с opacity 0)
+  const [measuredHeight, setMeasuredHeight] = useState<number | null>(null);
   const scroll = useScrollIndicator({ verticalPadding: 4 });
 
   const position = usePopoverPosition(
@@ -54,13 +57,13 @@ export function PopoverMenu({
     placement,
     windowWidth,
     windowHeight,
-    contentHeight,
+    measuredHeight,
     maxHeight ?? null,
   );
 
-  if (!open || !position) return null;
+  if (!position) return null;
 
-  const isMeasured = placement !== 'top-end' || contentHeight !== null;
+  const isMeasured = placement !== 'top-end' || measuredHeight !== null;
 
   return (
     <Modal
@@ -99,11 +102,7 @@ export function PopoverMenu({
             collapsable={false}
             onLayout={(event) => {
               const height = event.nativeEvent.layout.height;
-              setMeasurement((prev) =>
-                prev && prev.open === open && prev.height === height
-                  ? prev
-                  : { open, height },
-              );
+              setMeasuredHeight((prev) => (prev === height ? prev : height));
             }}
             style={maxHeight != null ? { maxHeight } : undefined}
           >
@@ -111,6 +110,9 @@ export function PopoverMenu({
               nestedScrollEnabled
               showsVerticalScrollIndicator={false}
               scrollEventThrottle={16}
+              /* Высота вьюпорта: без нее индикатор считает, что прокрутка
+                 есть всегда (viewport остается нулем) */
+              onLayout={scroll.onLayout}
               onScroll={scroll.onScroll}
               onContentSizeChange={(contentWidth, contentHeight) =>
                 scroll.onContentSizeChange({
@@ -122,7 +124,7 @@ export function PopoverMenu({
             >
               {children}
             </ScrollView>
-            <ScrollIndicator style={scroll.thumbStyle} side="right" inset={2} />
+            <ScrollIndicator style={scroll.thumbStyle} side="right" inset={3} />
           </View>
         </Pressable>
       </Pressable>

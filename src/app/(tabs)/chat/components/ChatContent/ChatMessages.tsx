@@ -123,12 +123,14 @@ export function ChatMessages() {
     listRef.current?.scrollToEnd({ animated: true });
   }, [activeNotes.length, showPending, streamingText, showError, showLoading]);
 
+  // Пузыри касаются краев списка (горизонтальный отступ — на самом
+  // списке): частично видимое сообщение срезается по скругленному
+  // углу рамки, а не по прямой
   return (
     <ScrollView
       ref={listRef}
-      className="flex-1"
+      className="mx-4 flex-1 overflow-hidden rounded-2xl"
       contentContainerStyle={{
-        paddingHorizontal: 16,
         paddingTop: 8,
         paddingBottom: 16,
         gap: 8,

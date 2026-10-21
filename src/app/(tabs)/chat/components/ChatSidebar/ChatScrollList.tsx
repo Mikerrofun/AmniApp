@@ -54,8 +54,10 @@ export function ChatSectionList({
 
   return (
     <>
+      {/* Частично видимые элементы срезаются по скругленному углу
+          списка, а не по прямой */}
       <SectionList
-        className="flex-1"
+        className="flex-1 overflow-hidden rounded-xl"
         sections={sections}
         keyExtractor={(chat) => chat.id}
         renderItem={({ item }: { item: ChatRecord }) => (
@@ -127,8 +129,10 @@ export function ChatSearchList({
 
   return (
     <>
+      {/* Частично видимые элементы срезаются по скругленному углу
+          списка, а не по прямой */}
       <FlatList
-        className="flex-1"
+        className="flex-1 overflow-hidden rounded-xl"
         data={results}
         keyExtractor={(result) => result.chat.id}
         renderItem={({ item }: { item: ChatSearchResult }) => (

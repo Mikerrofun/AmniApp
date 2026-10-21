@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { TextInput } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { TextInput, type View } from "react-native";
 
 import { useTemplatesStore } from "@/features/api-templates";
 import {
@@ -38,8 +38,26 @@ export function useChatInput(chatId: string | null) {
   const focusInputToken = useChatsStore((state) => state.focusInputToken);
   const lastFocusTokenRef = useRef(focusInputToken);
 
-  const { anchorRef, anchor, measure } = usePopoverAnchor();
+  const { anchorRef, anchor, setAnchor } = usePopoverAnchor();
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+
+  const rowRef = useRef<View>(null);
+  // «Покой» строки ввода: самая нижняя позиция ее нижнего края в окне.
+  // Клавиатура поднимает строку (нижний край уходит вверх), поэтому
+  // кэшируем максимум — поднятые кадры в кэш не попадают
+  const restingBottomRef = useRef<number | null>(null);
+
+  /** Кэширует нижний край строки ввода в положении «покой» */
+  const handleRowLayout = useCallback(() => {
+    rowRef.current?.measureInWindow((_x, y, _width, height) => {
+      const bottom = y + height;
+      const resting = restingBottomRef.current;
+
+      if (resting === null || bottom > resting) {
+        restingBottomRef.current = bottom;
+      }
+    });
+  }, []);
 
   useEffect(() => {
     void loadTemplates();
@@ -73,8 +91,25 @@ export function useChatInput(chatId: string | null) {
   }, [focusInputToken]);
 
   const handleOpenPicker = () => {
-    measure();
-    setIsPickerOpen(true);
+    rowRef.current?.measureInWindow((_x, rowY, _width, rowHeight) => {
+      const resting = restingBottomRef.current;
+      // Насколько клавиатура подняла строку относительно «покоя»
+      const raisedInset =
+        resting === null ? 0 : Math.max(0, resting - (rowY + rowHeight));
+
+      anchorRef.current?.measureInWindow((x, y, width, height) => {
+        // Поповер статичен, как модалка: позиция считается сразу для
+        // «покоя» строки. Если клавиатура открыта — роняем ее, строка
+        // опустится под уже открытый поповер
+        setAnchor({ x, y: y + raisedInset, width, height });
+
+        if (raisedInset > 1) {
+          inputRef.current?.blur();
+        }
+
+        setIsPickerOpen(true);
+      });
+    });
   };
 
   const handleClosePicker = () => setIsPickerOpen(false);
@@ -106,6 +141,8 @@ export function useChatInput(chatId: string | null) {
     isPickerOpen,
     anchorRef,
     anchor,
+    rowRef,
+    handleRowLayout,
     handleOpenPicker,
     handleClosePicker,
     handleSelectTemplate,
