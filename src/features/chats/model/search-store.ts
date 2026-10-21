@@ -1,17 +1,13 @@
-import { create } from 'zustand';
+import { create } from "zustand";
 
-import { getEmbeddingsClient } from '@/lib/ai/embeddings';
-import { searchChatsByEmbedding, searchChatsByKeywords } from '@/lib/db';
+import { getEmbeddingsClient } from "@/lib/ai/embeddings";
+import { searchChatsByEmbedding, searchChatsByKeywords } from "@/lib/db";
 
-import { parseHighlightedTitle } from '../lib/highlighted-title';
-import type { ChatSearchResult, SearchState } from './search-store.types';
+import { parseHighlightedTitle } from "../lib/highlighted-title";
+import type { ChatSearchResult, SearchState } from "./search-store.types";
 
-/**
- * Стор поиска. Экшены вызывают репозиторий и обновляют стейт,
- * таймеров и отмены внутри стора нет — они живут в use-chat-search.
- */
 export const useSearchStore = create<SearchState>((set) => ({
-  query: '',
+  query: "",
   keywordResults: [],
   embeddingResults: [],
   isSearching: false,
@@ -23,12 +19,11 @@ export const useSearchStore = create<SearchState>((set) => ({
       const records = await searchChatsByKeywords(query);
       const results: ChatSearchResult[] = records.map((record) => ({
         chat: record.chat,
-        sources: ['keyword'],
+        sources: ["keyword"],
         titleRanges: parseHighlightedTitle(record.highlightedTitle),
         score: 0,
       }));
 
-      // Пишем только если запрос не успел устареть
       set((state) =>
         state.query === query ? { keywordResults: results } : {},
       );
@@ -54,7 +49,7 @@ export const useSearchStore = create<SearchState>((set) => ({
       const records = await searchChatsByEmbedding(vector);
       const results: ChatSearchResult[] = records.map((record) => ({
         chat: record.chat,
-        sources: ['embedding'],
+        sources: ["embedding"],
         titleRanges: [],
         score: record.similarity,
       }));
@@ -64,7 +59,7 @@ export const useSearchStore = create<SearchState>((set) => ({
       set((state) =>
         state.query === query ? { embeddingResults: results } : {},
       );
-    } catch {
+    } catch (error) {
       // Ошибка сети/запроса не должна ломать keyword-поиск
       if (!signal.aborted) set({ embeddingResults: [] });
     } finally {
@@ -74,7 +69,7 @@ export const useSearchStore = create<SearchState>((set) => ({
 
   clearSearch: () =>
     set({
-      query: '',
+      query: "",
       keywordResults: [],
       embeddingResults: [],
       isSearching: false,

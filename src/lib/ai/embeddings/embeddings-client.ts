@@ -7,31 +7,24 @@ import type {
     EmbeddingVector,
 } from "./embeddings.types";
 
-// Cohere API возвращает массив векторов в поле embeddings
-const cohereResponseSchema = z.object({
-  embeddings: z.array(z.array(z.number())),
+const jinaResponseSchema = z.object({
+  data: z.array(
+    z.object({
+      embedding: z.array(z.number()),
+    }),
+  ),
 });
 
-/**
- * Ключ читается из env конфига (EXPO_PUBLIC_COHERE_API_KEY —
- * стандарт Expo для рантайм-доступных переменных); отсутствие
- * ключа — не ошибка.
- */
 function getApiKey(): string | null {
-  const apiKey = process.env.EXPO_PUBLIC_COHERE_API_KEY;
+  const apiKey = process.env.EXPO_PUBLIC_JINA_API_KEY;
 
   return apiKey ? apiKey : null;
 }
 
-/** Есть ли ключ для embedding-вызовов (для быстрой проверки без запроса) */
 export function isEmbeddingsAvailable(): boolean {
   return getApiKey() !== null;
 }
 
-/**
- * Cohere Embed API клиент для embeddings.
- * Чистая функция поверх fetch, поддержка AbortSignal для отмены устаревших запросов.
- */
 export function createEmbeddingsClient(
   config: EmbeddingsClientConfig,
 ): EmbeddingsClient {
@@ -39,7 +32,7 @@ export function createEmbeddingsClient(
     texts: string[],
     signal?: AbortSignal,
   ): Promise<EmbeddingVector[] | null> => {
-    const response = await fetch(`${config.baseUrl}/embed`, {
+    const response = await fetch(`${config.baseUrl}/embeddings`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -47,9 +40,7 @@ export function createEmbeddingsClient(
       },
       body: JSON.stringify({
         model: config.model,
-        texts: texts,
-        input_type: "search_document", // для индексации документов
-        embedding_types: ["float"], // получаем float векторы
+        input: texts,
       }),
       signal,
     });
@@ -57,13 +48,13 @@ export function createEmbeddingsClient(
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(
-        `Cohere embeddings request failed: ${response.status} - ${errorText}`,
+        `Jina embeddings request failed: ${response.status} - ${errorText}`,
       );
     }
 
-    const parsed = cohereResponseSchema.parse(await response.json());
+    const parsed = jinaResponseSchema.parse(await response.json());
 
-    return parsed.embeddings;
+    return parsed.data.map((item) => item.embedding);
   };
 
   return { embed };
