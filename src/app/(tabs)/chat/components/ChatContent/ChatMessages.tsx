@@ -87,6 +87,9 @@ export function ChatMessages() {
   const errorText = useGenerationStore((state) => state.errorText);
 
   const listRef = useRef<ScrollView>(null);
+  // Автоскролл вниз нужен только пока юзер и так внизу: иначе стрим
+  // постоянно дергает список, и прочитать ответ, листая вверх, нельзя
+  const isAtBottomRef = useRef(true);
 
   useEffect(() => {
     // Плашка ошибки не переживает смену чата; стрим при этом
@@ -102,6 +105,7 @@ export function ChatMessages() {
       return;
     }
 
+    isAtBottomRef.current = true;
     void loadChat(activeChatId);
   }, [activeChatId, loadChat, clearLoadedChat]);
 
@@ -120,42 +124,59 @@ export function ChatMessages() {
     isCurrentGeneration && status === 'error' && errorText !== null;
 
   useEffect(() => {
-    listRef.current?.scrollToEnd({ animated: true });
+    if (isAtBottomRef.current) {
+      listRef.current?.scrollToEnd({ animated: true });
+    }
   }, [activeNotes.length, showPending, streamingText, showError, showLoading]);
 
-  // Пузыри касаются краев списка (горизонтальный отступ — на самом
-  // списке): частично видимое сообщение срезается по скругленному
-  // углу рамки, а не по прямой
+  // Пузыри касаются краев списка (горизонтальный отступ — на обертке):
+  // частично видимое сообщение срезается по скругленному углу рамки,
+  // а не по прямой. overflow-hidden именно на обертке: на самом
+  // ScrollView он перекрывает его собственный overflow-scroll и ломает
+  // прокрутку (на web список перестает листаться дальше страницы)
   return (
-    <ScrollView
-      ref={listRef}
-      className="mx-4 flex-1 overflow-hidden rounded-2xl"
-      contentContainerStyle={{
-        paddingTop: 8,
-        paddingBottom: 16,
-        gap: 8,
-      }}
-    >
-      {activeNotes.map((note) => (
-        <MessageBubble key={note.id} role={note.role} text={note.text} />
-      ))}
+    <View className="mx-4 flex-1 overflow-hidden rounded-2xl">
+      <ScrollView
+        ref={listRef}
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
+        onScroll={(event) => {
+          const { contentOffset, contentSize, layoutMeasurement } =
+            event.nativeEvent;
+          const distanceFromBottom =
+            contentSize.height - layoutMeasurement.height - contentOffset.y;
 
-      {/* Оптимистичное сообщение юзера: в БД попадет только при успехе */}
-      {showPending && (
-        <MessageBubble role="user" text={pendingUserText ?? ""} />
-      )}
+          isAtBottomRef.current = distanceFromBottom < 48;
+        }}
+        scrollEventThrottle={16}
+        contentContainerStyle={{
+          paddingTop: 8,
+          paddingBottom: 16,
+          gap: 8,
+        }}
+      >
+        {activeNotes.map((note) => (
+          <MessageBubble key={note.id} role={note.role} text={note.text} />
+        ))}
 
-      {showLoading && <LoadingBubble />}
+        {/* Оптимистичное сообщение юзера: в БД попадет только при успехе */}
+        {showPending && (
+          <MessageBubble role="user" text={pendingUserText ?? ""} />
+        )}
 
-      {showStreaming && (
-        <MessageBubble role="assistant" text={streamingText} streaming />
-      )}
+        {showLoading && <LoadingBubble />}
 
-      {showError && (
-        <Text className="px-2 py-1 text-center text-xs text-text-muted">
-          {t("chatInput.errorPrefix")} {errorText}
-        </Text>
-      )}
-    </ScrollView>
+        {showStreaming && (
+          <MessageBubble role="assistant" text={streamingText} streaming />
+        )}
+
+        {showError && (
+          <Text className="px-2 py-1 text-center text-xs text-text-muted">
+            {t("chatInput.errorPrefix")} {errorText}
+          </Text>
+        )}
+      </ScrollView>
+    </View>
   );
 }
