@@ -97,13 +97,12 @@ export function useScrollIndicator(options: UseScrollIndicatorOptions = {}) {
       ? verticalPadding + progress * (trackHeight - thumbHeight)
       : verticalPadding;
 
-    // withTiming чуть «замедляет» тумбу: она плавно догоняет позицию
-    // скролла вместо мгновенных прыжков (заметно на коротких списках,
-    // где полсточка пролистывается одним движением)
+    // Позиция/высота плавно догоняют скролл (иначе тумба «дергается»).
+    // Opacity — напрямую из visibility: его анимирует withSequence в
+    // onScroll, лишний withTiming здесь добавлял вторую задержку, и
+    // тумба появлялась заметно позже начала прокрутки
     return {
-      opacity: withTiming(isOverflow ? visibility.value : 0, {
-        duration: THUMB_FADE_IN_DURATION,
-      }),
+      opacity: isOverflow ? visibility.value : 0,
       top: withTiming(top, { duration: THUMB_SMOOTHING_DURATION }),
       height: withTiming(thumbHeight, { duration: THUMB_SMOOTHING_DURATION }),
     };

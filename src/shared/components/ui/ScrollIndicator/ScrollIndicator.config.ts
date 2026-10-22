@@ -17,7 +17,7 @@ export const THUMB_COLOR = "rgba(255, 255, 255, 0.28)";
 export const THUMB_SMOOTHING_DURATION = 120;
 
 /** Время fade-in тумбы при начале прокрутки */
-export const THUMB_FADE_IN_DURATION = 150;
+export const THUMB_FADE_IN_DURATION = 80;
 
 /** Время fade-out тумбы после простоя */
 export const THUMB_FADE_OUT_DURATION = 250;
