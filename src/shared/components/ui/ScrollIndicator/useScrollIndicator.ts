@@ -1,10 +1,20 @@
 import type { LayoutChangeEvent, NativeSyntheticEvent } from "react-native";
-import { useAnimatedStyle, useSharedValue } from "react-native-reanimated";
+import {
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withSequence,
+  withTiming,
+} from "react-native-reanimated";
 
 import {
   OVERFLOW_EPSILON,
+  THUMB_FADE_IN_DURATION,
+  THUMB_FADE_OUT_DURATION,
+  THUMB_HIDE_DELAY,
   THUMB_MAX_HEIGHT,
   THUMB_MIN_HEIGHT,
+  THUMB_SMOOTHING_DURATION,
 } from "./ScrollIndicator.config";
 import type {
   ContentSizeEvent,
@@ -27,6 +37,8 @@ export function useScrollIndicator(options: UseScrollIndicatorOptions = {}) {
   const offsetY = useSharedValue(0);
   const viewportHeight = useSharedValue(0);
   const contentHeight = useSharedValue(0);
+  // 0 — тумба скрыта (прокрутка неактивна), 1 — видна
+  const visibility = useSharedValue(0);
 
   const onScroll = (event: NativeSyntheticEvent<ScrollMetrics>) => {
     offsetY.value = event.nativeEvent.contentOffset.y;
@@ -36,6 +48,16 @@ export function useScrollIndicator(options: UseScrollIndicatorOptions = {}) {
     if (height != null && height > 0) {
       contentHeight.value = height;
     }
+
+    // Тумба живет только пока прокрутка активна: fade-in по событию,
+    // пауза, fade-out; каждое новое событие перезапускает цепочку
+    visibility.value = withSequence(
+      withTiming(1, { duration: THUMB_FADE_IN_DURATION }),
+      withDelay(
+        THUMB_HIDE_DELAY,
+        withTiming(0, { duration: THUMB_FADE_OUT_DURATION }),
+      ),
+    );
   };
 
   const onContentSizeChange = (event: ContentSizeEvent) => {
@@ -75,10 +97,15 @@ export function useScrollIndicator(options: UseScrollIndicatorOptions = {}) {
       ? verticalPadding + progress * (trackHeight - thumbHeight)
       : verticalPadding;
 
+    // withTiming чуть «замедляет» тумбу: она плавно догоняет позицию
+    // скролла вместо мгновенных прыжков (заметно на коротких списках,
+    // где полсточка пролистывается одним движением)
     return {
-      opacity: isOverflow ? 1 : 0,
-      top,
-      height: thumbHeight,
+      opacity: withTiming(isOverflow ? visibility.value : 0, {
+        duration: THUMB_FADE_IN_DURATION,
+      }),
+      top: withTiming(top, { duration: THUMB_SMOOTHING_DURATION }),
+      height: withTiming(thumbHeight, { duration: THUMB_SMOOTHING_DURATION }),
     };
   });
 
