@@ -9,6 +9,10 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { useChatsStore, useGenerationStore } from "@/features/chats";
+import {
+  ScrollIndicator,
+  useScrollIndicator,
+} from "@/shared/components/ui/ScrollIndicator";
 import { colors } from "@/shared/config/colors";
 import { useT } from "@/shared/i18n";
 
@@ -35,7 +39,6 @@ function MessageBubble({ role, text, streaming = false }: MessageBubbleProps) {
   );
 }
 
-/** Крутящийся кружок: стрим начался, но первый токен еще не пришел */
 function LoadingBubble() {
   const rotation = useSharedValue(0);
 
@@ -80,20 +83,19 @@ export function ChatMessages() {
   const clearLoadedChat = useChatsStore((state) => state.clearLoadedChat);
   const status = useGenerationStore((state) => state.status);
   const generationChatId = useGenerationStore((state) => state.chatId);
-  const pendingUserText = useGenerationStore(
-    (state) => state.pendingUserText,
-  );
+  const pendingUserText = useGenerationStore((state) => state.pendingUserText);
   const streamingText = useGenerationStore((state) => state.streamingText);
   const errorText = useGenerationStore((state) => state.errorText);
 
   const listRef = useRef<ScrollView>(null);
+  const isAtBottomRef = useRef(true);
+  const scroll = useScrollIndicator({ verticalPadding: 8 });
 
   useEffect(() => {
-    // Плашка ошибки не переживает смену чата; стрим при этом
-    // продолжает жить в фоне — сброса генерации при уходе нет
+    // Плашка ошибки не переживает смену чата;
     const generation = useGenerationStore.getState();
 
-    if (generation.status === 'error') {
+    if (generation.status === "error") {
       generation.clearError();
     }
 
@@ -102,6 +104,7 @@ export function ChatMessages() {
       return;
     }
 
+    isAtBottomRef.current = true;
     void loadChat(activeChatId);
   }, [activeChatId, loadChat, clearLoadedChat]);
 
@@ -109,51 +112,81 @@ export function ChatMessages() {
   // Оптимистичный пузырь виден и до start() — chatId еще null
   const showPending =
     pendingUserText !== null &&
-    status !== 'error' &&
+    status !== "error" &&
     (isCurrentGeneration || generationChatId === null);
   const showStreaming =
-    isCurrentGeneration && status === 'streaming' && streamingText !== '';
+    isCurrentGeneration && status === "streaming" && streamingText !== "";
   // Стрим идет, но текста еще нет — показываем ожидание, чтобы не выглядело зависшим
   const showLoading =
-    isCurrentGeneration && status === 'streaming' && streamingText === '';
+    isCurrentGeneration && status === "streaming" && streamingText === "";
   const showError =
-    isCurrentGeneration && status === 'error' && errorText !== null;
+    isCurrentGeneration && status === "error" && errorText !== null;
 
   useEffect(() => {
-    listRef.current?.scrollToEnd({ animated: true });
+    if (isAtBottomRef.current) {
+      listRef.current?.scrollToEnd({ animated: true });
+    }
   }, [activeNotes.length, showPending, streamingText, showError, showLoading]);
 
+  // Пузыри касаются краев списка: скругленная обрезка — на внутренней
+  // обертке, а не на самом ScrollView (overflow-hidden на нем перекрывает
+  // его собственный overflow-scroll и ломает прокрутку на web). Внешний
+  // View без обрезки — точка позиционирования ползунка: как в сайдбаре,
+  // он лежит справа от списка, в зазоре до края панели (inset -6)
   return (
-    <ScrollView
-      ref={listRef}
-      className="flex-1"
-      contentContainerStyle={{
-        paddingHorizontal: 16,
-        paddingTop: 8,
-        paddingBottom: 16,
-        gap: 8,
-      }}
-    >
-      {activeNotes.map((note) => (
-        <MessageBubble key={note.id} role={note.role} text={note.text} />
-      ))}
+    <View className="mx-4 flex-1">
+      <View className="flex-1 overflow-hidden rounded-2xl">
+        <ScrollView
+          ref={listRef}
+          className="flex-1"
+          showsVerticalScrollIndicator={false}
+          showsHorizontalScrollIndicator={false}
+          onScroll={(event) => {
+            scroll.onScroll(event);
 
-      {/* Оптимистичное сообщение юзера: в БД попадет только при успехе */}
-      {showPending && (
-        <MessageBubble role="user" text={pendingUserText ?? ""} />
-      )}
+            const { contentOffset, contentSize, layoutMeasurement } =
+              event.nativeEvent;
+            const distanceFromBottom =
+              contentSize.height - layoutMeasurement.height - contentOffset.y;
 
-      {showLoading && <LoadingBubble />}
+            isAtBottomRef.current = distanceFromBottom < 48;
+          }}
+          onContentSizeChange={(width, height) =>
+            scroll.onContentSizeChange({
+              nativeEvent: { contentSize: { width, height } },
+            })
+          }
+          onLayout={scroll.onLayout}
+          scrollEventThrottle={16}
+          contentContainerStyle={{
+            paddingTop: 8,
+            paddingBottom: 16,
+            gap: 8,
+          }}
+        >
+          {activeNotes.map((note) => (
+            <MessageBubble key={note.id} role={note.role} text={note.text} />
+          ))}
 
-      {showStreaming && (
-        <MessageBubble role="assistant" text={streamingText} streaming />
-      )}
+          {/* Оптимистичное сообщение юзера: в БД попадет только при успехе */}
+          {showPending && (
+            <MessageBubble role="user" text={pendingUserText ?? ""} />
+          )}
 
-      {showError && (
-        <Text className="px-2 py-1 text-center text-xs text-text-muted">
-          {t("chatInput.errorPrefix")} {errorText}
-        </Text>
-      )}
-    </ScrollView>
+          {showLoading && <LoadingBubble />}
+
+          {showStreaming && (
+            <MessageBubble role="assistant" text={streamingText} streaming />
+          )}
+
+          {showError && (
+            <Text className="px-2 py-1 text-center text-xs text-text-muted">
+              {t("chatInput.errorPrefix")} {errorText}
+            </Text>
+          )}
+        </ScrollView>
+      </View>
+      <ScrollIndicator style={scroll.thumbStyle} side="right" inset={-6} />
+    </View>
   );
 }

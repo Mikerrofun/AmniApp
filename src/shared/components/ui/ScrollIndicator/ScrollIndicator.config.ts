@@ -12,3 +12,15 @@ export const THUMB_WIDTH = 3;
 
 /** Цвет полоски индикатора (белосерый, полупрозрачный) */
 export const THUMB_COLOR = "rgba(255, 255, 255, 0.28)";
+
+/** Длительность «догоняния» тумбой позиции скролла (плавность хода) */
+export const THUMB_SMOOTHING_DURATION = 50;
+
+/** Время fade-in тумбы при начале прокрутки */
+export const THUMB_FADE_IN_DURATION = 80;
+
+/** Время fade-out тумбы после простоя */
+export const THUMB_FADE_OUT_DURATION = 250;
+
+/** Пауза после последнего события прокрутки перед скрытием тумбы */
+export const THUMB_HIDE_DELAY = 900;

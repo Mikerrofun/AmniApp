@@ -1,10 +1,20 @@
 import type { LayoutChangeEvent, NativeSyntheticEvent } from "react-native";
-import { useAnimatedStyle, useSharedValue } from "react-native-reanimated";
+import {
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withSequence,
+  withTiming,
+} from "react-native-reanimated";
 
 import {
   OVERFLOW_EPSILON,
+  THUMB_FADE_IN_DURATION,
+  THUMB_FADE_OUT_DURATION,
+  THUMB_HIDE_DELAY,
   THUMB_MAX_HEIGHT,
   THUMB_MIN_HEIGHT,
+  THUMB_SMOOTHING_DURATION,
 } from "./ScrollIndicator.config";
 import type {
   ContentSizeEvent,
@@ -16,10 +26,6 @@ import type {
  * Колбэк пишет в shared value из JS-потока, отрисовка тумбы идёт
  * на UI-потоке. Колбэки не мемоизированы — компонент не ре-рендерится
  * при скролле, пересоздавать нечего.
- *
- * Хук намеренно не экспортирует resetScroll: правильное решение —
- * перемонтировать сам компонент со списком (через key), тогда shared
- * values получают чистые 0 при каждом монтировании без скачков.
  */
 export function useScrollIndicator(options: UseScrollIndicatorOptions = {}) {
   const { verticalPadding = 4 } = options;
@@ -27,15 +33,24 @@ export function useScrollIndicator(options: UseScrollIndicatorOptions = {}) {
   const offsetY = useSharedValue(0);
   const viewportHeight = useSharedValue(0);
   const contentHeight = useSharedValue(0);
+  // 0 — тумба скрыта (прокрутка неактивна), 1 — видна
+  const visibility = useSharedValue(0);
 
   const onScroll = (event: NativeSyntheticEvent<ScrollMetrics>) => {
     offsetY.value = event.nativeEvent.contentOffset.y;
 
-    // Для TextInput contentSize может приходить в onScroll
     const height = event.nativeEvent.contentSize?.height;
     if (height != null && height > 0) {
       contentHeight.value = height;
     }
+
+    visibility.value = withSequence(
+      withTiming(1, { duration: THUMB_FADE_IN_DURATION }),
+      withDelay(
+        THUMB_HIDE_DELAY,
+        withTiming(0, { duration: THUMB_FADE_OUT_DURATION }),
+      ),
+    );
   };
 
   const onContentSizeChange = (event: ContentSizeEvent) => {
@@ -76,9 +91,9 @@ export function useScrollIndicator(options: UseScrollIndicatorOptions = {}) {
       : verticalPadding;
 
     return {
-      opacity: isOverflow ? 1 : 0,
-      top,
-      height: thumbHeight,
+      opacity: isOverflow ? visibility.value : 0,
+      top: withTiming(top, { duration: THUMB_SMOOTHING_DURATION }),
+      height: withTiming(thumbHeight, { duration: THUMB_SMOOTHING_DURATION }),
     };
   });
 

@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { TextInput } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { TextInput, type View } from "react-native";
 
 import { useTemplatesStore } from "@/features/api-templates";
 import {
@@ -12,11 +12,6 @@ import { usePopoverAnchor } from "@/shared/components/ui/PopoverMenu";
 
 import type { ApiTemplate } from "@/types/api-template";
 
-/**
- * Логика поля ввода: выбранный шаблон, доступность отправки,
- * фокус-эффекты и хендлеры (пикер шаблона, отправка).
- * ChatInputArea остается чистым рендером.
- */
 export function useChatInput(chatId: string | null) {
   const { draft, handleChange } = useChatDraft(chatId);
   const { sendMessage } = useChatActions();
@@ -28,9 +23,7 @@ export function useChatInput(chatId: string | null) {
   const setChatTemplate = useChatsStore((state) => state.setChatTemplate);
   const setLastTemplateId = useChatsStore((state) => state.setLastTemplateId);
   const generationStatus = useGenerationStore((state) => state.status);
-  const pendingUserText = useGenerationStore(
-    (state) => state.pendingUserText,
-  );
+  const pendingUserText = useGenerationStore((state) => state.pendingUserText);
 
   const inputRef = useRef<TextInput>(null);
   const focusChatId = useChatsStore((state) => state.focusChatId);
@@ -38,8 +31,22 @@ export function useChatInput(chatId: string | null) {
   const focusInputToken = useChatsStore((state) => state.focusInputToken);
   const lastFocusTokenRef = useRef(focusInputToken);
 
-  const { anchorRef, anchor, measure } = usePopoverAnchor();
+  const { anchorRef, anchor, setAnchor } = usePopoverAnchor();
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+
+  const rowRef = useRef<View>(null);
+  const restingBottomRef = useRef<number | null>(null);
+
+  const handleRowLayout = useCallback(() => {
+    rowRef.current?.measureInWindow((_x, y, _width, height) => {
+      const bottom = y + height;
+      const resting = restingBottomRef.current;
+
+      if (resting === null || bottom > resting) {
+        restingBottomRef.current = bottom;
+      }
+    });
+  }, []);
 
   useEffect(() => {
     void loadTemplates();
@@ -73,8 +80,25 @@ export function useChatInput(chatId: string | null) {
   }, [focusInputToken]);
 
   const handleOpenPicker = () => {
-    measure();
-    setIsPickerOpen(true);
+    rowRef.current?.measureInWindow((_x, rowY, _width, rowHeight) => {
+      const resting = restingBottomRef.current;
+      // Насколько клавиатура подняла строку относительно «покоя»
+      const raisedInset =
+        resting === null ? 0 : Math.max(0, resting - (rowY + rowHeight));
+
+      anchorRef.current?.measureInWindow((x, y, width, height) => {
+        // Поповер статичен, как модалка: позиция считается сразу для
+        // «покоя» строки. Если клавиатура открыта — роняем ее, строка
+        // опустится под уже открытый поповер
+        setAnchor({ x, y: y + raisedInset, width, height });
+
+        if (raisedInset > 1) {
+          inputRef.current?.blur();
+        }
+
+        setIsPickerOpen(true);
+      });
+    });
   };
 
   const handleClosePicker = () => setIsPickerOpen(false);
@@ -106,6 +130,8 @@ export function useChatInput(chatId: string | null) {
     isPickerOpen,
     anchorRef,
     anchor,
+    rowRef,
+    handleRowLayout,
     handleOpenPicker,
     handleClosePicker,
     handleSelectTemplate,

@@ -31,6 +31,8 @@ export function ChatInputArea({ chatId }: ChatInputAreaProps) {
     isPickerOpen,
     anchorRef,
     anchor,
+    rowRef,
+    handleRowLayout,
     handleOpenPicker,
     handleClosePicker,
     handleSelectTemplate,
@@ -47,19 +49,22 @@ export function ChatInputArea({ chatId }: ChatInputAreaProps) {
         onSelect={handleSelectTemplate}
       />
 
-      <View className="flex-row items-center gap-2 rounded-3xl border border-white/10 bg-white/5 p-2">
-        {/* Мини-кнопка выбора шаблона API */}
-        <View className="h-9 w-9 items-center justify-center rounded-full bg-white/5">
-          <Pressable
-            ref={anchorRef}
-            accessibilityRole="button"
-            accessibilityLabel={t("chatInput.chooseTemplate")}
-            onPress={handleOpenPicker}
-            className="h-full w-full items-center justify-center"
-          >
-            <KeyRound size={16} color={colors.textMuted} />
-          </Pressable>
-        </View>
+      <View
+        ref={rowRef}
+        onLayout={handleRowLayout}
+        className="flex-row items-center gap-2 rounded-full border border-white/10 bg-white/5 p-2"
+      >
+        {/* Мини-кнопка выбора шаблона API: без собственной плашки —
+            двойной фон ломал левый край капсулы */}
+        <Pressable
+          ref={anchorRef}
+          accessibilityRole="button"
+          accessibilityLabel={t("chatInput.chooseTemplate")}
+          onPress={handleOpenPicker}
+          className="h-9 w-9 items-center justify-center rounded-full active:bg-white/10"
+        >
+          <KeyRound size={16} color={colors.textMuted} />
+        </Pressable>
 
         <View className="relative min-w-0 flex-1">
           <TextInput

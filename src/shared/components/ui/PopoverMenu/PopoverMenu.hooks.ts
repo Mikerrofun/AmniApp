@@ -15,6 +15,8 @@ export const POPOVER_SCREEN_MARGIN = 8;
 /**
  * Измерение якорного элемента для позиционирования popover'а.
  * anchorRef навешивается на якорную View, measure вызывается перед открытием.
+ * setAnchor — для якорей, посчитанных вручную (например, с поправкой
+ * на подъем клавиатурой).
  */
 export function usePopoverAnchor() {
   const anchorRef = useRef<View>(null);
@@ -26,7 +28,7 @@ export function usePopoverAnchor() {
     });
   }, []);
 
-  return { anchorRef, anchor, measure };
+  return { anchorRef, anchor, measure, setAnchor };
 }
 
 /**
