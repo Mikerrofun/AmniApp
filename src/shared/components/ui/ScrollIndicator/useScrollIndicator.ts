@@ -26,10 +26,6 @@ import type {
  * Колбэк пишет в shared value из JS-потока, отрисовка тумбы идёт
  * на UI-потоке. Колбэки не мемоизированы — компонент не ре-рендерится
  * при скролле, пересоздавать нечего.
- *
- * Хук намеренно не экспортирует resetScroll: правильное решение —
- * перемонтировать сам компонент со списком (через key), тогда shared
- * values получают чистые 0 при каждом монтировании без скачков.
  */
 export function useScrollIndicator(options: UseScrollIndicatorOptions = {}) {
   const { verticalPadding = 4 } = options;
@@ -43,14 +39,11 @@ export function useScrollIndicator(options: UseScrollIndicatorOptions = {}) {
   const onScroll = (event: NativeSyntheticEvent<ScrollMetrics>) => {
     offsetY.value = event.nativeEvent.contentOffset.y;
 
-    // Для TextInput contentSize может приходить в onScroll
     const height = event.nativeEvent.contentSize?.height;
     if (height != null && height > 0) {
       contentHeight.value = height;
     }
 
-    // Тумба живет только пока прокрутка активна: fade-in по событию,
-    // пауза, fade-out; каждое новое событие перезапускает цепочку
     visibility.value = withSequence(
       withTiming(1, { duration: THUMB_FADE_IN_DURATION }),
       withDelay(
@@ -97,10 +90,6 @@ export function useScrollIndicator(options: UseScrollIndicatorOptions = {}) {
       ? verticalPadding + progress * (trackHeight - thumbHeight)
       : verticalPadding;
 
-    // Позиция/высота плавно догоняют скролл (иначе тумба «дергается»).
-    // Opacity — напрямую из visibility: его анимирует withSequence в
-    // onScroll, лишний withTiming здесь добавлял вторую задержку, и
-    // тумба появлялась заметно позже начала прокрутки
     return {
       opacity: isOverflow ? visibility.value : 0,
       top: withTiming(top, { duration: THUMB_SMOOTHING_DURATION }),

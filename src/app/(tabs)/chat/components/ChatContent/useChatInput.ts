@@ -12,11 +12,6 @@ import { usePopoverAnchor } from "@/shared/components/ui/PopoverMenu";
 
 import type { ApiTemplate } from "@/types/api-template";
 
-/**
- * Логика поля ввода: выбранный шаблон, доступность отправки,
- * фокус-эффекты и хендлеры (пикер шаблона, отправка).
- * ChatInputArea остается чистым рендером.
- */
 export function useChatInput(chatId: string | null) {
   const { draft, handleChange } = useChatDraft(chatId);
   const { sendMessage } = useChatActions();
@@ -28,9 +23,7 @@ export function useChatInput(chatId: string | null) {
   const setChatTemplate = useChatsStore((state) => state.setChatTemplate);
   const setLastTemplateId = useChatsStore((state) => state.setLastTemplateId);
   const generationStatus = useGenerationStore((state) => state.status);
-  const pendingUserText = useGenerationStore(
-    (state) => state.pendingUserText,
-  );
+  const pendingUserText = useGenerationStore((state) => state.pendingUserText);
 
   const inputRef = useRef<TextInput>(null);
   const focusChatId = useChatsStore((state) => state.focusChatId);
@@ -42,12 +35,8 @@ export function useChatInput(chatId: string | null) {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
 
   const rowRef = useRef<View>(null);
-  // «Покой» строки ввода: самая нижняя позиция ее нижнего края в окне.
-  // Клавиатура поднимает строку (нижний край уходит вверх), поэтому
-  // кэшируем максимум — поднятые кадры в кэш не попадают
   const restingBottomRef = useRef<number | null>(null);
 
-  /** Кэширует нижний край строки ввода в положении «покой» */
   const handleRowLayout = useCallback(() => {
     rowRef.current?.measureInWindow((_x, y, _width, height) => {
       const bottom = y + height;

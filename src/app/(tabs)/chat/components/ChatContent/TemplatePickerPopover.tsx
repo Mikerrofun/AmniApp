@@ -9,11 +9,7 @@ import { useT } from "@/shared/i18n";
 import type { PopoverAnchor } from "@/shared/components/ui/PopoverMenu";
 
 const TEMPLATE_POPOVER_WIDTH = 240;
-/**
- * Лимит высоты списка: дальше — внутренняя прокрутка с индикатором.
- * Ровно 4 строки без прокрутки (строка ~52px: две строки текста 20+16
- * + py-2), пятый шаблон уже прокручивается.
- */
+
 const TEMPLATE_POPOVER_MAX_HEIGHT = 224;
 
 export type TemplatePickerPopoverProps = {
@@ -26,10 +22,6 @@ export type TemplatePickerPopoverProps = {
   onSelect: (templateId: string) => void;
 };
 
-/**
- * Поповер выбора шаблона API: список шаблонов из стора,
- * у выбранного — галочка. Пустой список — подсказка.
- */
 export function TemplatePickerPopover({
   open,
   onClose,
@@ -45,8 +37,6 @@ export function TemplatePickerPopover({
       open={open}
       onClose={onClose}
       anchor={anchor}
-      /* Открывается над кнопкой-ключом: не перекрывается клавиатурой
-         и читается лучше, чем под кнопкой */
       placement="top-end"
       width={TEMPLATE_POPOVER_WIDTH}
       maxHeight={TEMPLATE_POPOVER_MAX_HEIGHT}

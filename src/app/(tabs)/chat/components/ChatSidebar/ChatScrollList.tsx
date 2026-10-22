@@ -54,8 +54,6 @@ export function ChatSectionList({
 
   return (
     <>
-      {/* Частично видимые элементы срезаются по скругленному углу
-          списка, а не по прямой */}
       <SectionList
         className="flex-1 overflow-hidden rounded-xl"
         sections={sections}
@@ -129,8 +127,6 @@ export function ChatSearchList({
 
   return (
     <>
-      {/* Частично видимые элементы срезаются по скругленному углу
-          списка, а не по прямой */}
       <FlatList
         className="flex-1 overflow-hidden rounded-xl"
         data={results}

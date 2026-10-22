@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 import {
   Modal,
   Platform,
@@ -7,30 +7,20 @@ import {
   StyleSheet,
   useWindowDimensions,
   View,
-} from 'react-native';
+} from "react-native";
 
 import {
   ScrollIndicator,
   useScrollIndicator,
-} from '@/shared/components/ui/ScrollIndicator';
-import { colors } from '@/shared/config/colors';
+} from "@/shared/components/ui/ScrollIndicator";
+import { colors } from "@/shared/config/colors";
 
-import { POPOVER_DEFAULT_WIDTH, usePopoverPosition } from './PopoverMenu.hooks';
-import type { PopoverMenuProps } from './PopoverMenu.types';
+import { POPOVER_DEFAULT_WIDTH, usePopoverPosition } from "./PopoverMenu.hooks";
+import type { PopoverMenuProps } from "./PopoverMenu.types";
 
 /**
  * Якорный popover: маленькое меню, открывающееся рядом с элементом-якорем.
  * Рендерится в transparent Modal, поэтому всегда поверх overlay-сайдбара.
- * Закрытие: тап вне popover'а (все платформы), уход курсора (web),
- * кнопка назад (Android).
- *
- * Контент монтируется только на время открытия: измерения высоты и
- * shared values индикатора прокрутки не протекают между открытиями
- * (иначе тумба остается в позиции прошлого скролла).
- *
- * С maxHeight контент выше лимита скроллится, справа — ScrollIndicator.
- * Для top-placement высота измеряется onLayout'ом: первый кадр рендерится
- * с opacity 0 по оценке maxHeight, затем позиция уточняется.
  */
 export function PopoverMenu({ open, ...content }: PopoverMenuProps) {
   if (!open) return null;
@@ -40,14 +30,13 @@ export function PopoverMenu({ open, ...content }: PopoverMenuProps) {
 function PopoverMenuContent({
   onClose,
   anchor,
-  placement = 'bottom-end',
+  placement = "bottom-end",
   width = POPOVER_DEFAULT_WIDTH,
   maxHeight,
   children,
-}: Omit<PopoverMenuProps, 'open'>) {
+}: Omit<PopoverMenuProps, "open">) {
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
-  // Высота контента для позиционирования top-placement: до первого
-  // onLayout берём maxHeight как оценку (первый кадр — с opacity 0)
+
   const [measuredHeight, setMeasuredHeight] = useState<number | null>(null);
   const scroll = useScrollIndicator({ verticalPadding: 4 });
 
@@ -63,7 +52,7 @@ function PopoverMenuContent({
 
   if (!position) return null;
 
-  const isMeasured = placement !== 'top-end' || measuredHeight !== null;
+  const isMeasured = placement !== "top-end" || measuredHeight !== null;
 
   return (
     <Modal
@@ -73,21 +62,15 @@ function PopoverMenuContent({
       animationType="fade"
       onRequestClose={onClose}
     >
-      {/* Слой-перехватчик: тап вне popover закрывает его */}
       <Pressable
         style={StyleSheet.absoluteFill}
         onPress={onClose}
         accessible={false}
       >
-        {/* Контейнер popover'а: Pressable, т.к. hover-события
-            (закрытие по уходу курсора на web) есть только на Pressable */}
         <Pressable
           collapsable={false}
-          /* Перехватываем начало касания, чтобы тап по телу popover
-             не проваливался в закрывающий слой */
           onStartShouldSetResponder={() => true}
-          /* Web: закрытие, когда курсор ушел с popover'а */
-          onHoverOut={Platform.OS === 'web' ? onClose : undefined}
+          onHoverOut={Platform.OS === "web" ? onClose : undefined}
           style={[
             styles.popover,
             {
@@ -110,8 +93,6 @@ function PopoverMenuContent({
               nestedScrollEnabled
               showsVerticalScrollIndicator={false}
               scrollEventThrottle={16}
-              /* Высота вьюпорта: без нее индикатор считает, что прокрутка
-                 есть всегда (viewport остается нулем) */
               onLayout={scroll.onLayout}
               onScroll={scroll.onScroll}
               onContentSizeChange={(contentWidth, contentHeight) =>
@@ -134,7 +115,7 @@ function PopoverMenuContent({
 
 const styles = StyleSheet.create({
   popover: {
-    position: 'absolute',
+    position: "absolute",
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.panelBorder,
