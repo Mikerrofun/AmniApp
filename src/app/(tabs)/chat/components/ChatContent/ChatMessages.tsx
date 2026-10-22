@@ -9,11 +9,11 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { useChatsStore, useGenerationStore } from "@/features/chats";
-import { colors } from "@/shared/config/colors";
 import {
   ScrollIndicator,
   useScrollIndicator,
 } from "@/shared/components/ui/ScrollIndicator";
+import { colors } from "@/shared/config/colors";
 import { useT } from "@/shared/i18n";
 
 import type { MessageBubbleProps } from "./ChatMessages.types";
@@ -39,7 +39,6 @@ function MessageBubble({ role, text, streaming = false }: MessageBubbleProps) {
   );
 }
 
-/** Крутящийся кружок: стрим начался, но первый токен еще не пришел */
 function LoadingBubble() {
   const rotation = useSharedValue(0);
 
@@ -84,26 +83,19 @@ export function ChatMessages() {
   const clearLoadedChat = useChatsStore((state) => state.clearLoadedChat);
   const status = useGenerationStore((state) => state.status);
   const generationChatId = useGenerationStore((state) => state.chatId);
-  const pendingUserText = useGenerationStore(
-    (state) => state.pendingUserText,
-  );
+  const pendingUserText = useGenerationStore((state) => state.pendingUserText);
   const streamingText = useGenerationStore((state) => state.streamingText);
   const errorText = useGenerationStore((state) => state.errorText);
 
   const listRef = useRef<ScrollView>(null);
-  // Автоскролл вниз нужен только пока юзер и так внизу: иначе стрим
-  // постоянно дергает список, и прочитать ответ, листая вверх, нельзя
   const isAtBottomRef = useRef(true);
-  // Тонкий ползунок прокрутки как в сайдбаре чатов (вместо системного
-  // скроллбара)
   const scroll = useScrollIndicator({ verticalPadding: 8 });
 
   useEffect(() => {
-    // Плашка ошибки не переживает смену чата; стрим при этом
-    // продолжает жить в фоне — сброса генерации при уходе нет
+    // Плашка ошибки не переживает смену чата;
     const generation = useGenerationStore.getState();
 
-    if (generation.status === 'error') {
+    if (generation.status === "error") {
       generation.clearError();
     }
 
@@ -120,15 +112,15 @@ export function ChatMessages() {
   // Оптимистичный пузырь виден и до start() — chatId еще null
   const showPending =
     pendingUserText !== null &&
-    status !== 'error' &&
+    status !== "error" &&
     (isCurrentGeneration || generationChatId === null);
   const showStreaming =
-    isCurrentGeneration && status === 'streaming' && streamingText !== '';
+    isCurrentGeneration && status === "streaming" && streamingText !== "";
   // Стрим идет, но текста еще нет — показываем ожидание, чтобы не выглядело зависшим
   const showLoading =
-    isCurrentGeneration && status === 'streaming' && streamingText === '';
+    isCurrentGeneration && status === "streaming" && streamingText === "";
   const showError =
-    isCurrentGeneration && status === 'error' && errorText !== null;
+    isCurrentGeneration && status === "error" && errorText !== null;
 
   useEffect(() => {
     if (isAtBottomRef.current) {
