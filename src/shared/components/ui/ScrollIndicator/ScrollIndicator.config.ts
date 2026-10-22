@@ -14,7 +14,7 @@ export const THUMB_WIDTH = 3;
 export const THUMB_COLOR = "rgba(255, 255, 255, 0.28)";
 
 /** Длительность «догоняния» тумбой позиции скролла (плавность хода) */
-export const THUMB_SMOOTHING_DURATION = 120;
+export const THUMB_SMOOTHING_DURATION = 50;
 
 /** Время fade-in тумбы при начале прокрутки */
 export const THUMB_FADE_IN_DURATION = 80;
