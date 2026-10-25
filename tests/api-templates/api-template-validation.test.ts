@@ -4,7 +4,7 @@ import { describe, it } from 'node:test';
 import {
   MODEL_REQUIRES_API_KEY_MESSAGE,
   apiTemplateFormSchema,
-} from './api-template';
+} from '../../src/schemas/api-template';
 
 const validForm = {
   name: 'My template',

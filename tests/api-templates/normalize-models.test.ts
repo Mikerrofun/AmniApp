@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { normalizeModelList } from './normalize-models';
+import { normalizeModelList } from '../../src/shared/lib/ai/normalize-models';
 
 describe('normalizeModelList', () => {
   it('извлекает data[].id, делает trim, dedup и сортировку', () => {

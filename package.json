@@ -53,6 +53,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
+    "test": "tsx --test tests/**/*.test.ts",
+    "test:api-templates": "tsx --test tests/api-templates/*.test.ts",
     "test:embeddings": "./test-cohere-embeddings.sh"
   },
   "private": true

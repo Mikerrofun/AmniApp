@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { filterModels } from './filter-models';
+import { filterModels } from '../../src/shared/components/ModelSelect/filter-models';
 
 const models = [
   'openai/gpt-4.1-mini',
