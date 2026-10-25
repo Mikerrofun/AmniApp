@@ -56,9 +56,16 @@
     "listTitle": "Templates",
     "empty": "No templates yet",
     "invalidForm": "Fill in all fields",
+    "keyRequired": "Enter the API key first",
     "duplicateName": "A template with this name already exists",
       "saveFailed": "Failed to save template",
     "deleteFailed": "Failed to delete template",
     "deleteTemplate": "Delete template"
+  },
+  "modelSelect": {
+    "searchPlaceholder": "Search model",
+    "notFound": "Model not found",
+    "loading": "Loading models...",
+    "close": "Close model list"
   }
 }

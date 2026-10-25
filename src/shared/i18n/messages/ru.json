@@ -56,9 +56,16 @@
     "listTitle": "Шаблоны",
     "empty": "Нет шаблонов",
     "invalidForm": "Заполните все поля",
+    "keyRequired": "Сначала введите ключ",
     "duplicateName": "Шаблон с таким именем уже существует",
       "saveFailed": "Не удалось сохранить шаблон",
     "deleteFailed": "Не удалось удалить шаблон",
     "deleteTemplate": "Удалить шаблон"
+  },
+  "modelSelect": {
+    "searchPlaceholder": "Поиск модели",
+    "notFound": "Модель не найдена",
+    "loading": "Загрузка моделей...",
+    "close": "Закрыть список моделей"
   }
 }

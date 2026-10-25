@@ -1,6 +1,7 @@
 import { Pressable, Text, TextInput, View } from "react-native";
 
 import { API_TEMPLATE_PRESETS } from "@/types/api-template";
+import { ModelSelect } from "@/shared/components/ModelSelect";
 import { colors } from "@/shared/config/colors";
 import { useT } from "@/shared/i18n";
 
@@ -18,6 +19,7 @@ export function TemplateForm() {
     setModel,
     apiKey,
     setApiKey,
+    apiKeyError,
     handleAdd,
   } = useTemplateForm();
 
@@ -69,14 +71,12 @@ export function TemplateForm() {
       <Text className="pb-1 pt-4 text-xs uppercase tracking-wide text-text-muted">
         {t("apiTab.model")}
       </Text>
-      <TextInput
+      <ModelSelect
+        baseUrl={API_TEMPLATE_PRESETS[provider].baseUrl}
+        provider={provider}
+        apiKey={apiKey}
         value={model}
-        onChangeText={setModel}
-        autoCapitalize="none"
-        autoCorrect={false}
-        placeholder={t("apiTab.modelPlaceholder")}
-        placeholderTextColor={colors.placeholder}
-        className="rounded-xl border border-white/10 bg-background px-3 py-2 text-sm text-text-primary"
+        onChange={setModel}
       />
 
       <Text className="pb-1 pt-4 text-xs uppercase tracking-wide text-text-muted">
@@ -90,7 +90,9 @@ export function TemplateForm() {
         secureTextEntry
         placeholder={t("apiTab.apiKeyPlaceholder")}
         placeholderTextColor={colors.placeholder}
-        className="rounded-xl border border-white/10 bg-background px-3 py-2 text-sm text-text-primary"
+        className={`rounded-xl border bg-background px-3 py-2 text-sm text-text-primary ${
+          apiKeyError ? "border-accent" : "border-white/10"
+        }`}
       />
 
       <Pressable
