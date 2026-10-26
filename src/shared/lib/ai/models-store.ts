@@ -1,9 +1,8 @@
-import { create } from 'zustand';
+import { create } from "zustand";
 
-import { fetchAvailableModels } from './models';
-import type { ModelsState } from './models-store.types';
+import { fetchAvailableModels } from "./models";
+import type { ModelsState } from "./models-store.types";
 
-/** Ключ записи кэша: провайдер входит в ключ, у разных провайдеров списки разные */
 export const modelsCacheKey = (provider: string, apiKey: string): string =>
   `${provider}|${apiKey}`;
 
@@ -21,13 +20,13 @@ export const useModelsStore = create<ModelsState>((set, get) => ({
     const key = modelsCacheKey(provider, apiKey);
     const entry = get().entries[key];
 
-    if (entry?.status === 'ready' || entry?.status === 'loading') return;
+    if (entry?.status === "ready" || entry?.status === "loading") return;
 
     const controller = new AbortController();
     inFlightControllers.set(key, controller);
 
     set((state) => ({
-      entries: { ...state.entries, [key]: { status: 'loading', models: [] } },
+      entries: { ...state.entries, [key]: { status: "loading", models: [] } },
     }));
 
     const result = await fetchAvailableModels({
@@ -46,8 +45,8 @@ export const useModelsStore = create<ModelsState>((set, get) => ({
       entries: {
         ...state.entries,
         [key]: result.ok
-          ? { status: 'ready', models: result.models }
-          : { status: 'error', models: [] },
+          ? { status: "ready", models: result.models }
+          : { status: "error", models: [] },
       },
     }));
   },

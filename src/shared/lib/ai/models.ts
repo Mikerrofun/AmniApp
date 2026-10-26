@@ -1,11 +1,11 @@
-import { fetch } from 'expo/fetch';
+import { fetch } from "expo/fetch";
 
-import { normalizeModelList } from './normalize-models';
-import { MODELS_REQUEST_TIMEOUT_MS } from './models.config';
+import { MODELS_REQUEST_TIMEOUT_MS } from "./models.config";
 import type {
   FetchAvailableModelsParams,
   FetchModelsResult,
-} from './models.types';
+} from "./models.types";
+import { normalizeModelList } from "./normalize-models";
 
 /**
  * Получает список моделей провайдера: нативный fetch с устройства
@@ -18,11 +18,10 @@ export async function fetchAvailableModels({
   apiKey,
   signal,
 }: FetchAvailableModelsParams): Promise<FetchModelsResult> {
-  // Совмещаем внешний сигнал с таймаутом: один контроллер на оба случая
   const controller = new AbortController();
   const onExternalAbort = () => controller.abort();
 
-  signal?.addEventListener('abort', onExternalAbort);
+  signal?.addEventListener("abort", onExternalAbort);
 
   const timeout = setTimeout(
     () => controller.abort(),
@@ -36,28 +35,27 @@ export async function fetchAvailableModels({
     });
 
     if (response.status === 401 || response.status === 403) {
-      return { ok: false, reason: 'unauthorized' };
+      return { ok: false, reason: "unauthorized" };
     }
 
     if (!response.ok) {
-      return { ok: false, reason: 'other' };
+      return { ok: false, reason: "other" };
     }
 
     const payload = await response.json();
 
     return { ok: true, models: normalizeModelList(payload) };
   } catch (error) {
-    // Аборт (внешний или по таймауту) — не сетевая ошибка
     if (controller.signal.aborted) {
-      return { ok: false, reason: 'other' };
+      return { ok: false, reason: "other" };
     }
 
     return {
       ok: false,
-      reason: error instanceof TypeError ? 'network' : 'other',
+      reason: error instanceof TypeError ? "network" : "other",
     };
   } finally {
     clearTimeout(timeout);
-    signal?.removeEventListener('abort', onExternalAbort);
+    signal?.removeEventListener("abort", onExternalAbort);
   }
 }

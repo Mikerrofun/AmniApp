@@ -1,4 +1,5 @@
 import { ChevronDown } from "lucide-react-native";
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -11,17 +12,17 @@ import {
 
 import { colors } from "@/shared/config/colors";
 import { useT } from "@/shared/i18n";
+import { modelsCacheKey, useModelsStore } from "@/shared/lib/ai/models-store";
 
-import { FIELD_CLASS, MODEL_LIST_MAX_HEIGHT } from "./ModelSelect.config";
+import { MODEL_LIST_MAX_HEIGHT } from "./ModelSelect.config";
 import type { ModelSelectProps } from "./ModelSelect.types";
-import { useModelSelect } from "./useModelSelect";
+import { filterModels } from "./filter-models";
 
-/**
- * Переиспользуемый выбор модели. Единственный источник модели — список
- * провайдера: пока ключ не введен, поле заблокировано с подсказкой;
- * после загрузки списка — дропдаун с поиском. Ручной ввод имени разрешен
- * только при ошибке запроса или пустом списке — иначе модель не выбрать.
- */
+const FIELD_CLASS =
+  "rounded-xl border border-white/10 bg-background px-3 py-2 text-sm text-text-primary";
+
+const EMPTY_MODELS: string[] = [];
+
 export function ModelSelect({
   provider,
   apiKey,
@@ -30,20 +31,18 @@ export function ModelSelect({
   disabled = false,
 }: ModelSelectProps) {
   const t = useT();
-  const {
-    isOpen,
-    query,
-    setQuery,
-    status,
-    hasList,
-    filtered,
-    isDropdownLocked,
-    openDropdown,
-    closeDropdown,
-  } = useModelSelect({ provider, apiKey, disabled });
+  const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState("");
 
-  // Список запрашивается: поле показывает состояние, выбор пока недоступен
-  if (status === "loading") {
+  const cacheKey = modelsCacheKey(provider, apiKey);
+  const entry = useModelsStore((state) => state.entries[cacheKey]);
+  const status = entry?.status ?? "idle";
+  const models = entry?.models ?? EMPTY_MODELS;
+
+  const hasList = status === "ready" && models.length > 0;
+  const filtered = useMemo(() => filterModels(models, query), [models, query]);
+
+  if (!hasList && status === "loading") {
     return (
       <View className={`flex-row items-center gap-2 ${FIELD_CLASS}`}>
         <ActivityIndicator size="small" color={colors.textMuted} />
@@ -54,21 +53,7 @@ export function ModelSelect({
     );
   }
 
-  // Ключа еще нет — список неоткуда запросить: ввод заблокирован,
-  // вместо модели подсказка «вставьте ключ»
-  if (status === "idle") {
-    return (
-      <TextInput
-        value={value}
-        editable={false}
-        placeholder={t("modelSelect.insertKeyHint")}
-        placeholderTextColor={colors.placeholder}
-        className={`${FIELD_CLASS} opacity-50`}
-      />
-    );
-  }
-
-  // Ошибка запроса или провайдер отдал пустой список — ручной ввод имени
+  // Ошибка/пустой список/еще не запрашивался — ручной ввод имени модели
   if (!hasList) {
     return (
       <TextInput
@@ -83,6 +68,15 @@ export function ModelSelect({
       />
     );
   }
+
+  const isDropdownLocked = disabled || apiKey.trim() === "";
+
+  const openDropdown = () => {
+    if (isDropdownLocked) return;
+
+    setQuery("");
+    setIsOpen(true);
+  };
 
   return (
     <>
@@ -110,12 +104,12 @@ export function ModelSelect({
         transparent
         animationType="fade"
         visible={isOpen}
-        onRequestClose={closeDropdown}
+        onRequestClose={() => setIsOpen(false)}
       >
         <Pressable
           accessibilityLabel={t("modelSelect.close")}
           className="flex-1 bg-black/50 px-4 pt-24"
-          onPress={closeDropdown}
+          onPress={() => setIsOpen(false)}
         >
           <Pressable className="rounded-2xl border border-white/10 bg-card p-3">
             <TextInput
@@ -126,7 +120,7 @@ export function ModelSelect({
               autoCorrect={false}
               placeholder={t("modelSelect.searchPlaceholder")}
               placeholderTextColor={colors.placeholder}
-              className={FIELD_CLASS}
+              className="rounded-xl border border-white/10 bg-background px-3 py-2 text-sm text-text-primary"
             />
 
             <FlatList
@@ -145,7 +139,7 @@ export function ModelSelect({
                     accessibilityState={{ selected: isActive }}
                     onPress={() => {
                       onChange(item);
-                      closeDropdown();
+                      setIsOpen(false);
                     }}
                     className={`rounded-xl px-3 py-2.5 ${
                       isActive ? "bg-accent" : "active:bg-white/10"

@@ -1,4 +1,4 @@
-import type { ProviderModelsResponse } from './models.types';
+import type { ProviderModelsResponse } from "./models.types";
 
 /**
  * Нормализует список моделей из ответа провайдера: берет `data[].id`,
@@ -14,13 +14,12 @@ export function normalizeModelList(payload: unknown): string[] {
   const ids = new Set<string>();
 
   for (const item of data) {
-    if (typeof item?.id !== 'string') continue;
+    if (typeof item?.id !== "string") continue;
 
     const id = item.id.trim();
 
-    if (id !== '') ids.add(id);
+    if (id !== "") ids.add(id);
   }
 
-  // Разные провайдеры отдают дубли и разный порядок — приводим к единому виду
   return [...ids].sort((a, b) => a.localeCompare(b));
 }

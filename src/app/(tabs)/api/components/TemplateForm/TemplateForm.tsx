@@ -1,13 +1,12 @@
 import { Pressable, Text, TextInput, View } from "react-native";
 
-import { API_TEMPLATE_PRESETS } from "@/types/api-template";
 import { ModelSelect } from "@/shared/components/ModelSelect";
 import { colors } from "@/shared/config/colors";
 import { useT } from "@/shared/i18n";
+import { API_TEMPLATE_PRESETS } from "@/types/api-template";
 
 import { useTemplateForm } from "./useTemplateForm";
 
-/** Форма создания шаблона: имя, пресет провайдера, модель, ключ */
 export function TemplateForm() {
   const t = useT();
   const {
