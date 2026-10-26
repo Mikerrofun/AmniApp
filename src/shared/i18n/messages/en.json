@@ -60,5 +60,12 @@
       "saveFailed": "Failed to save template",
     "deleteFailed": "Failed to delete template",
     "deleteTemplate": "Delete template"
+  },
+  "modelSelect": {
+    "searchPlaceholder": "Search model",
+    "notFound": "Model not found",
+    "insertKeyHint": "Insert API key to load models",
+    "loading": "Loading models...",
+    "close": "Close model list"
   }
 }

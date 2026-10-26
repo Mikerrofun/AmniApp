@@ -6,8 +6,8 @@ import { useChatsStore } from "@/features/chats";
 import { useT } from "@/shared/i18n";
 
 import type { ChatContentProps } from "./ChatContent.types";
-import { ChatInputArea } from "./ChatInputArea";
-import { ChatMessages } from "./ChatMessages";
+import { ChatInputArea } from "../ChatInputArea";
+import { ChatMessages } from "../ChatMessages";
 import { useKeyboardInset } from "./useKeyboardInset";
 
 /**

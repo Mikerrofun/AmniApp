@@ -1,4 +1,7 @@
-import { FTS_HIGHLIGHT_END, FTS_HIGHLIGHT_START } from '@/lib/db/search.config';
+import {
+  FTS_HIGHLIGHT_END,
+  FTS_HIGHLIGHT_START,
+} from '@/shared/lib/search';
 
 import type { TitleMatchRange, TitleSegment } from '../model/search-store.types';
 

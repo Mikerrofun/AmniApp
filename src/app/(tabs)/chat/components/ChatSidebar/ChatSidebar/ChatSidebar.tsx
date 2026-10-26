@@ -22,18 +22,18 @@ import {
 import { colors } from "@/shared/config/colors";
 import { useT } from "@/shared/i18n";
 
-import { ChatSearchList, ChatSectionList } from "./ChatScrollList";
+import { ChatSearchList, ChatSectionList } from "../ChatScrollList";
 import {
   ANIMATION_DURATION,
   CONTENT_TOP_OFFSET,
   PANEL_BOTTOM_RADIUS,
-} from "./ChatSidebar.config";
+} from "../ChatSidebar.config";
 import {
   useChatSections,
   useSearchResetOnClose,
   useSidebarHandlers,
-} from "./ChatSidebar.hooks";
-import type { ChatSidebarProps } from "./ChatSidebar.types";
+} from "../ChatSidebar.hooks";
+import type { ChatSidebarProps } from "../ChatSidebar.types";
 
 function SidebarContent({
   onClose,

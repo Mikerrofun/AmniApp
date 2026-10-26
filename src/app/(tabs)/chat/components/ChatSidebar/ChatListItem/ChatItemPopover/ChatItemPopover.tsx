@@ -1,6 +1,6 @@
 import { PopoverMenu } from "@/shared/components/ui/PopoverMenu";
 
-import { CHAT_POPOVER_WIDTH } from "./ChatListItem.config";
+import { CHAT_POPOVER_WIDTH } from "../ChatListItem.config";
 import { CHAT_POPOVER_CONTENT } from "./ChatItemPopover.config";
 import type { ChatItemPopoverProps } from "./ChatItemPopover.types";
 

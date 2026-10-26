@@ -3,7 +3,7 @@ import { Pressable } from "react-native";
 import { useT } from "@/shared/i18n";
 import { cn } from "@/shared/lib/cn";
 
-import type { ChatSidebarTriggerProps } from "./ChatSidebar.types";
+import type { ChatSidebarTriggerProps } from "../ChatSidebar.types";
 
 /** Размер кнопки одинаков на всех платформах */
 const TRIGGER_SIZE = 32;

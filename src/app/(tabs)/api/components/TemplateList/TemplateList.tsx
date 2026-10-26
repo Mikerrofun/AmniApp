@@ -1,7 +1,7 @@
 import { Trash2 } from "lucide-react-native";
 import { Pressable, Text, View } from "react-native";
 import Animated, {
-  FadeIn,
+  FadeInUp,
   FadeOut,
   LinearTransition,
 } from "react-native-reanimated";
@@ -9,6 +9,7 @@ import Animated, {
 import { colors } from "@/shared/config/colors";
 import { useT } from "@/shared/i18n";
 
+import { API_TAB_ANIMATION } from "../api-tab.animation";
 import { useTemplateList } from "./useTemplateList";
 
 /** Список шаблонов с кнопкой удаления у каждого */
@@ -28,9 +29,9 @@ export function TemplateList() {
         templates.map((template) => (
           <Animated.View
             key={template.id}
-            layout={LinearTransition.duration(200)}
-            entering={FadeIn.duration(250)}
-            exiting={FadeOut.duration(200)}
+            layout={LinearTransition.duration(API_TAB_ANIMATION.listLayout)}
+            entering={FadeInUp.duration(API_TAB_ANIMATION.listEnter)}
+            exiting={FadeOut.duration(API_TAB_ANIMATION.listExit)}
             className="mb-2 flex-row items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2"
           >
             <View className="min-w-0 flex-1">

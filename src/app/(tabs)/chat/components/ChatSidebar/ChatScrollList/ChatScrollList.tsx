@@ -18,8 +18,8 @@ import {
 import { useT } from "@/shared/i18n";
 import type { ChatRecord } from "@/types/chat";
 
-import { ChatListItem } from "./ChatListItem";
-import { ChatListSection } from "./ChatListSection";
+import { ChatListItem } from "../ChatListItem";
+import { ChatListSection } from "../ChatListSection";
 
 type CommonItemProps = {
   activeChatId: string | null;
