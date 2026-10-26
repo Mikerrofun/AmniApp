@@ -1,8 +1,17 @@
 import { ChevronDown } from "lucide-react-native";
 import { useRef, useState, type ComponentRef } from "react";
-import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 
-import { PopoverMenu, type PopoverAnchor } from "@/shared/components/ui/PopoverMenu";
+import {
+  PopoverMenu,
+  type PopoverAnchor,
+} from "@/shared/components/ui/PopoverMenu";
 import { colors } from "@/shared/config/colors";
 import { useT } from "@/shared/i18n";
 
@@ -10,7 +19,6 @@ import { FIELD_CLASS, MODEL_LIST_MAX_HEIGHT } from "./ModelSelect.config";
 import type { ModelSelectProps } from "./ModelSelect.types";
 import { useModelSelect } from "./useModelSelect";
 
-/** Ширина дропдауна, пока якорь не измерен (до первого открытия) */
 const FALLBACK_POPOVER_WIDTH = 280;
 
 export function ModelSelect({
@@ -36,7 +44,6 @@ export function ModelSelect({
     closeDropdown,
   } = useModelSelect({ provider, apiKey, disabled });
 
-  // Якорь измеряется в момент нажатия: дропдаун открывается рядом с полем
   const handleOpen = () => {
     if (isDropdownLocked) return;
 
@@ -57,7 +64,6 @@ export function ModelSelect({
     );
   }
 
-  // Ошибка/пустой список/еще не запрашивался — ручной ввод имени модели
   if (!hasList) {
     return (
       <TextInput
