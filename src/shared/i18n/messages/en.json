@@ -56,7 +56,6 @@
     "listTitle": "Templates",
     "empty": "No templates yet",
     "invalidForm": "Fill in all fields",
-    "keyRequired": "Enter the API key first",
     "duplicateName": "A template with this name already exists",
       "saveFailed": "Failed to save template",
     "deleteFailed": "Failed to delete template",
@@ -65,6 +64,7 @@
   "modelSelect": {
     "searchPlaceholder": "Search model",
     "notFound": "Model not found",
+    "insertKeyHint": "Insert API key to load models",
     "loading": "Loading models...",
     "close": "Close model list"
   }

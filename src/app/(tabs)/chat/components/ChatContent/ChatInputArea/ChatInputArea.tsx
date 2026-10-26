@@ -9,7 +9,7 @@ import { colors } from "@/shared/config/colors";
 import { useT } from "@/shared/i18n";
 
 import type { ChatInputAreaProps } from "./ChatInputArea.types";
-import { TemplatePickerPopover } from "./TemplatePickerPopover";
+import { TemplatePickerPopover } from "../TemplatePickerPopover";
 import { useChatInput } from "./useChatInput";
 
 /**

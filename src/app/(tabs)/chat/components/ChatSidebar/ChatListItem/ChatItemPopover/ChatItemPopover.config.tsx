@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 
-import type { ChatPopoverMode } from "./ChatListItem.types";
+import type { ChatPopoverMode } from "../ChatListItem.types";
 import type { ChatPopoverContentProps } from "./ChatItemPopover.types";
 import { ChatPopoverDelete } from "./ChatPopoverDelete";
 import { ChatPopoverMenu } from "./ChatPopoverMenu";

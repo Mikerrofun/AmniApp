@@ -19,7 +19,7 @@ export function TemplateForm() {
     setModel,
     apiKey,
     setApiKey,
-    apiKeyError,
+    handleApiKeyBlur,
     handleAdd,
   } = useTemplateForm();
 
@@ -85,14 +85,13 @@ export function TemplateForm() {
       <TextInput
         value={apiKey}
         onChangeText={setApiKey}
+        onBlur={handleApiKeyBlur}
         autoCapitalize="none"
         autoCorrect={false}
         secureTextEntry
         placeholder={t("apiTab.apiKeyPlaceholder")}
         placeholderTextColor={colors.placeholder}
-        className={`rounded-xl border bg-background px-3 py-2 text-sm text-text-primary ${
-          apiKeyError ? "border-accent" : "border-white/10"
-        }`}
+        className="rounded-xl border border-white/10 bg-background px-3 py-2 text-sm text-text-primary"
       />
 
       <Pressable

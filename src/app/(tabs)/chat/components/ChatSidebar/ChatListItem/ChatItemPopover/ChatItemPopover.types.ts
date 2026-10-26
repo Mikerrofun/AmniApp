@@ -1,6 +1,6 @@
 import type { ChatRecord } from '@/types/chat';
 
-import type { ChatPopoverMode } from './ChatListItem.types';
+import type { ChatPopoverMode } from '../ChatListItem.types';
 import type { PopoverAnchor } from '@/shared/components/ui/PopoverMenu';
 import type { Pin } from 'lucide-react-native';
 
