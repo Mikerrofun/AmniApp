@@ -1,17 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { useTemplatesStore } from "@/features/api-templates";
-import {
-  MODEL_REQUIRES_API_KEY_MESSAGE,
-  apiTemplateFormSchema,
-} from "@/schemas/api-template";
+import { apiTemplateFormSchema } from "@/schemas/api-template";
 import { showToast } from "@/shared/components/ui/Toast";
 import { useT } from "@/shared/i18n";
 import { useModelsStore } from "@/shared/lib/ai/models-store";
-import {
-  MODELS_FETCH_DEBOUNCE_MS,
-  MODELS_MIN_API_KEY_LENGTH,
-} from "@/shared/lib/ai/models.config";
+import { MODELS_FETCH_DEBOUNCE_MS } from "@/shared/lib/ai/models.config";
 
 import { API_TEMPLATE_PRESETS } from "@/types/api-template";
 
@@ -45,11 +39,10 @@ export function useTemplateForm() {
     [apiKey, provider],
   );
 
-  // Авто-запрос списка моделей: после остановки ввода ключа, если длина
-  // достаточная. Повторный ввод того же ключа повторного запроса не делает
-  // (кэш стора).
+  // Авто-запрос списка моделей: после остановки ввода ключа.
+  // Повторный ввод того же ключа повторного запроса не делает (кэш стора).
   useEffect(() => {
-    if (apiKey.trim().length < MODELS_MIN_API_KEY_LENGTH) return;
+    if (!apiKey.trim()) return;
 
     const timer = setTimeout(() => {
       void useModelsStore
@@ -69,14 +62,7 @@ export function useTemplateForm() {
     });
 
     if (!parsed.success) {
-      const keyIssue = parsed.error.issues.some(
-        (issue) =>
-          issue.path.includes("apiKey") &&
-          issue.message === MODEL_REQUIRES_API_KEY_MESSAGE,
-      );
-
-      setApiKeyError(keyIssue);
-      showToast(keyIssue ? t("apiTab.keyRequired") : t("apiTab.invalidForm"));
+      showToast(t("apiTab.invalidForm"));
       return;
     }
 

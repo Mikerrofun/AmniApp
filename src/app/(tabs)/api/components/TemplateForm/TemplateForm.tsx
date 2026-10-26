@@ -18,7 +18,6 @@ export function TemplateForm() {
     setModel,
     apiKey,
     setApiKey,
-    handleApiKeyBlur,
     handleAdd,
   } = useTemplateForm();
 
@@ -84,7 +83,6 @@ export function TemplateForm() {
       <TextInput
         value={apiKey}
         onChangeText={setApiKey}
-        onBlur={handleApiKeyBlur}
         autoCapitalize="none"
         autoCorrect={false}
         secureTextEntry
