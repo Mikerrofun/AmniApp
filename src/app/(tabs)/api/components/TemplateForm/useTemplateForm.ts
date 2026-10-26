@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useTemplatesStore } from "@/features/api-templates";
 import { apiTemplateFormSchema } from "@/schemas/api-template";
@@ -7,6 +7,7 @@ import { useT } from "@/shared/i18n";
 import { useModelsStore } from "@/shared/lib/ai/models-store";
 import { MODELS_FETCH_DEBOUNCE_MS } from "@/shared/lib/ai/models.config";
 
+import { API_TAB_ANIMATION } from "../api-tab.animation";
 import { API_TEMPLATE_PRESETS } from "@/types/api-template";
 
 import type { ApiTemplateProvider } from "@/types/api-template";
@@ -14,7 +15,8 @@ import type { ApiTemplateProvider } from "@/types/api-template";
 /**
  * Форма создания шаблона: поля, zod-валидация, addTemplate, авто-запрос
  * списка моделей по ключу (debounce, кэш в models-store). Ошибки — тост;
- * при успехе поля очищаются. Вся логика — здесь, компонент только рендерит.
+ * при успехе поля гаснут (isClearing), очищаются невидимыми и возвращаются.
+ * Вся логика — здесь, компонент только рендерит.
  */
 export function useTemplateForm() {
   const t = useT();
@@ -24,13 +26,23 @@ export function useTemplateForm() {
   const [provider, setProvider] = useState<ApiTemplateProvider>("openai");
   const [model, setModel] = useState("");
   const [apiKey, setApiKeyState] = useState("");
-  const [apiKeyError, setApiKeyError] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
+  const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (clearTimerRef.current !== null) clearTimeout(clearTimerRef.current);
+    };
+  }, []);
+
+  // Кнопка активна, только когда заполнены все поля (провайдер выбран всегда)
+  const canSubmit =
+    name.trim() !== "" && model.trim() !== "" && apiKey.trim() !== "";
 
   const setApiKey = useCallback(
     (text: string) => {
       if (text !== apiKey) {
         setModel("");
-        setApiKeyError(false);
         useModelsStore.getState().cancelKey(provider, apiKey);
       }
 
@@ -54,6 +66,9 @@ export function useTemplateForm() {
   }, [apiKey, provider]);
 
   const handleAdd = useCallback(async () => {
+    // Повторное нажатие во время анимации очистки — защита от двойного add
+    if (isClearing) return;
+
     const parsed = apiTemplateFormSchema.safeParse({
       name,
       provider,
@@ -66,8 +81,6 @@ export function useTemplateForm() {
       return;
     }
 
-    setApiKeyError(false);
-
     try {
       await addTemplate(
         parsed.data.name,
@@ -76,9 +89,16 @@ export function useTemplateForm() {
         parsed.data.apiKey,
       );
 
-      setName("");
-      setModel("");
-      setApiKeyState("");
+      // Поля гаснут, очищаются невидимыми и возвращаются — тайминги общие
+      // со списком, чтобы вход нового шаблона совпадал с очисткой формы
+      setIsClearing(true);
+      if (clearTimerRef.current !== null) clearTimeout(clearTimerRef.current);
+      clearTimerRef.current = setTimeout(() => {
+        setName("");
+        setModel("");
+        setApiKeyState("");
+        setIsClearing(false);
+      }, API_TAB_ANIMATION.formFadeOut);
     } catch (error) {
       console.log("[v0] createTemplate failed:", error);
       // UNIQUE(name) — самый вероятный отказ вставки; остальные ошибки
@@ -90,7 +110,7 @@ export function useTemplateForm() {
           : t("apiTab.saveFailed"),
       );
     }
-  }, [t, addTemplate, name, provider, model, apiKey]);
+  }, [t, addTemplate, name, provider, model, apiKey, isClearing]);
 
   return {
     name,
@@ -101,7 +121,8 @@ export function useTemplateForm() {
     setModel,
     apiKey,
     setApiKey,
-    apiKeyError,
+    isClearing,
+    canSubmit,
     handleAdd,
   };
 }
