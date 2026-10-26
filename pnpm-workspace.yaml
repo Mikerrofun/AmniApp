@@ -1,4 +1,5 @@
 allowBuilds:
+  esbuild: set this to true or false
   unrs-resolver: true
 minimumReleaseAgeExclude:
   - '@expo/cli@57.0.28'
