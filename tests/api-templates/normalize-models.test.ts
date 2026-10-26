@@ -17,6 +17,19 @@ describe('normalizeModelList', () => {
     assert.deepEqual(result, ['claude-3', 'gpt-4.1-mini', 'gpt-4o']);
   });
 
+  it('срезает ведущий «~» и «~/» и схлопывает дубли после среза', () => {
+    const result = normalizeModelList({
+      data: [
+        { id: '~/gpt-4o' },
+        { id: '~claude-3' },
+        { id: 'gpt-4o' },
+        { id: '~~weird' },
+      ],
+    });
+
+    assert.deepEqual(result, ['~weird', 'claude-3', 'gpt-4o']);
+  });
+
   it('отбрасывает не-строки и пустые id', () => {
     const result = normalizeModelList({
       data: [{ id: 42 }, { id: null }, {}, { id: '   ' }, { id: 'm1' }],

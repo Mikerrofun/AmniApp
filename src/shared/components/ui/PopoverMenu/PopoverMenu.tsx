@@ -92,6 +92,9 @@ function PopoverMenuContent({
             <ScrollView
               nestedScrollEnabled
               showsVerticalScrollIndicator={false}
+              // В поповерах бывают инпуты (поиск моделей): тап по строке
+              // при открытой клавиатуре должен срабатывать с первого раза
+              keyboardShouldPersistTaps="handled"
               scrollEventThrottle={16}
               onLayout={scroll.onLayout}
               onScroll={scroll.onScroll}
