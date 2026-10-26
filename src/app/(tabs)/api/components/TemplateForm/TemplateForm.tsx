@@ -1,7 +1,7 @@
 import { Pressable, Text, TextInput, View } from "react-native";
 import Animated, {
-  useAnimatedStyle,
-  withTiming,
+    useAnimatedStyle,
+    withTiming,
 } from "react-native-reanimated";
 
 import { ModelSelect } from "@/shared/components/ModelSelect";
@@ -42,19 +42,26 @@ export function TemplateForm() {
   );
 
   // Кнопка: серая, пока форма не заполнена, красная — когда заполнена
-  const buttonStyle = useAnimatedStyle(() => ({
-    backgroundColor: withTiming(
-      canSubmit ? colors.accent : colors.card,
-      { duration: API_TAB_ANIMATION.formFadeOut },
-    ),
-  }), [canSubmit]);
+  const buttonStyle = useAnimatedStyle(
+    () => ({
+      backgroundColor: withTiming(
+        canSubmit ? colors.accent : colors.background,
+        {
+          duration: API_TAB_ANIMATION.formFadeOut,
+        },
+      ),
+    }),
+    [canSubmit],
+  );
 
-  const buttonTextStyle = useAnimatedStyle(() => ({
-    color: withTiming(
-      canSubmit ? "#FFFFFF" : colors.textMuted,
-      { duration: API_TAB_ANIMATION.formFadeOut },
-    ),
-  }), [canSubmit]);
+  const buttonTextStyle = useAnimatedStyle(
+    () => ({
+      color: withTiming(canSubmit ? "#FFFFFF" : "#A0A0A0", {
+        duration: API_TAB_ANIMATION.formFadeOut,
+      }),
+    }),
+    [canSubmit],
+  );
 
   return (
     <View className="mx-4 mt-6 rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -137,7 +144,10 @@ export function TemplateForm() {
           onPress={() => void handleAdd()}
           className="items-center py-2.5"
         >
-          <Animated.Text style={buttonTextStyle} className="text-sm font-semibold">
+          <Animated.Text
+            style={buttonTextStyle}
+            className="text-sm font-semibold"
+          >
             {t("apiTab.add")}
           </Animated.Text>
         </Pressable>
