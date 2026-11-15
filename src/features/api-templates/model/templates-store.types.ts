@@ -8,6 +8,7 @@ export type TemplatesState = {
   addTemplate: (
     name: string,
     provider: ApiTemplateProvider,
+    baseUrl: string,
     model: string,
     apiKey: string,
   ) => Promise<ApiTemplate>;

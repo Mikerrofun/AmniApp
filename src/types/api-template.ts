@@ -1,11 +1,16 @@
 import type { ApiTemplateProvider } from '@/shared/config/config.types';
 
-// Пресеты провайдеров живут в shared/config (config.types.ts),
+// Реестр провайдеров живет в shared/config (providers.config.ts),
 // здесь только реэкспорт для обратной совместимости импортов
 export {
-  API_TEMPLATE_PRESETS,
-  type ApiTemplateProvider,
-  type ApiTemplatePreset,
+  getProviderConfig,
+  getProviderLabel,
+  PROVIDER_REGISTRY,
+} from '@/shared/config/providers.config';
+
+export type {
+  ApiProviderConfig,
+  ApiTemplateProvider,
 } from '@/shared/config/config.types';
 
 /** Шаблон API без секретов (ключ никогда не попадает в это представление) */

@@ -7,6 +7,7 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { colors } from "@/shared/config/colors";
+import { getProviderLabel } from "@/shared/config/providers.config";
 import { useT } from "@/shared/i18n";
 
 import { API_TAB_ANIMATION } from "../api-tab.animation";
@@ -39,7 +40,7 @@ export function TemplateList() {
                 {template.name}
               </Text>
               <Text numberOfLines={1} className="text-xs text-text-muted">
-                {template.provider} · {template.model}
+                {getProviderLabel(template.provider)} · {template.model}
               </Text>
             </View>
             <Pressable

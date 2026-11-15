@@ -128,6 +128,10 @@ async function migrate(db: SQLite.SQLiteDatabase): Promise<void> {
   // добавляются шаблоны API и привязка шаблона к чату. Таблица messages
   // дропается — приложение в dev, данных в ней нет.
   if (current < 4) {
+    // Колонка api_templates.provider — TEXT без ограничений: расширение
+    // набора провайдеров (автоопределение по префиксу ключа) — уровень
+    // типов, а не схемы. Миграция не нужна, DB_SCHEMA_VERSION остается 4,
+    // старые значения 'openai'/'openrouter' валидны.
     await db.execAsync(`
       CREATE TABLE IF NOT EXISTS context (
         id TEXT PRIMARY KEY NOT NULL,

@@ -1,4 +1,4 @@
-/** Статус загрузки списка моделей для одной пары provider|apiKey */
+/** Статус загрузки списка моделей для одной пары baseUrl|apiKey */
 export type ModelsStatus = 'idle' | 'loading' | 'ready' | 'error';
 
 /** Запись кэша моделей: in-memory на сессию, не персистится */
@@ -8,18 +8,19 @@ export type ModelsCacheEntry = {
 };
 
 export type ModelsState = {
-  /** Ключ записи — `provider|apiKey` (см. modelsCacheKey) */
+  /** Ключ записи — `baseUrl|apiKey` (см. modelsCacheKey) */
   entries: Record<string, ModelsCacheEntry>;
   /**
    * Обеспечивает список моделей: ready — из кэша без запроса,
    * loading — не запускает второй запрос (in-flight дедупликация),
-   * иначе выполняет fetchAvailableModels.
+   * иначе выполняет фетчер из MODELS_FETCHERS по provider.
    */
   ensureModels: (
+    /** Provider id — выбор фетчера из MODELS_FETCHERS */
     provider: string,
     baseUrl: string,
     apiKey: string,
   ) => Promise<void>;
   /** Абортит in-flight запрос по ключу и удаляет запись кэша */
-  cancelKey: (provider: string, apiKey: string) => void;
+  cancelKey: (baseUrl: string, apiKey: string) => void;
 };

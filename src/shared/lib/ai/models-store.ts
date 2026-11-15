@@ -1,23 +1,24 @@
 import { create } from "zustand";
 
-import { fetchAvailableModels } from "./models";
+import { getModelsFetcher } from "./models-fetchers.config";
 import type { ModelsState } from "./models-store.types";
 
-export const modelsCacheKey = (provider: string, apiKey: string): string =>
-  `${provider}|${apiKey}`;
+export const modelsCacheKey = (baseUrl: string, apiKey: string): string =>
+  `${baseUrl}|${apiKey}`;
 
 // Контроллеры in-flight запросов — несериализуемое состояние вне стора
 const inFlightControllers = new Map<string, AbortController>();
 
 /**
  * Кэш списков моделей провайдеров. In-memory на сессию: рестарт
- * приложения сбрасывает кэш, список запрашивается заново.
+ * приложения сбрасывает кэш, список запрашивается заново. Два шаблона
+ * с одинаковыми baseUrl+ключ шарят один запрос списка моделей.
  */
 export const useModelsStore = create<ModelsState>((set, get) => ({
   entries: {},
 
   ensureModels: async (provider, baseUrl, apiKey) => {
-    const key = modelsCacheKey(provider, apiKey);
+    const key = modelsCacheKey(baseUrl, apiKey);
     const entry = get().entries[key];
 
     if (entry?.status === "ready" || entry?.status === "loading") return;
@@ -29,11 +30,10 @@ export const useModelsStore = create<ModelsState>((set, get) => ({
       entries: { ...state.entries, [key]: { status: "loading", models: [] } },
     }));
 
-    const result = await fetchAvailableModels({
-      baseUrl,
-      apiKey,
-      signal: controller.signal,
-    });
+    // Provider выбирает фетчер из MODELS_FETCHERS (нативные списки
+    // anthropic/gemini/cohere, для остальных — OpenAI-запрос)
+    const fetchModels = getModelsFetcher(provider);
+    const result = await fetchModels({ baseUrl, apiKey, signal: controller.signal });
 
     // Ключ сбросили/заменили, пока запрос был в полете, — ответ
     // от старого ключа не должен перезаписать состояние новой записи
@@ -51,8 +51,8 @@ export const useModelsStore = create<ModelsState>((set, get) => ({
     }));
   },
 
-  cancelKey: (provider, apiKey) => {
-    const key = modelsCacheKey(provider, apiKey);
+  cancelKey: (baseUrl, apiKey) => {
+    const key = modelsCacheKey(baseUrl, apiKey);
 
     inFlightControllers.get(key)?.abort();
     inFlightControllers.delete(key);

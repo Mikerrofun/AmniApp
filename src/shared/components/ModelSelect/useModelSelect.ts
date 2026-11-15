@@ -8,7 +8,7 @@ import { filterModels } from "./filter-models";
 
 type UseModelSelectArgs = Pick<
   ModelSelectProps,
-  "provider" | "apiKey" | "disabled"
+  "baseUrl" | "apiKey" | "disabled"
 >;
 
 /**
@@ -17,14 +17,14 @@ type UseModelSelectArgs = Pick<
  * только рендерит состояния по status.
  */
 export function useModelSelect({
-  provider,
+  baseUrl,
   apiKey,
   disabled = false,
 }: UseModelSelectArgs) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
 
-  const cacheKey = modelsCacheKey(provider, apiKey);
+  const cacheKey = modelsCacheKey(baseUrl, apiKey);
   const entry = useModelsStore((state) => state.entries[cacheKey]);
   const status = entry?.status ?? "idle";
   const models = entry?.models ?? EMPTY_MODELS;

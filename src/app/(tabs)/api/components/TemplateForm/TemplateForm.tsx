@@ -7,7 +7,6 @@ import Animated, {
 import { ModelSelect } from "@/shared/components/ModelSelect";
 import { colors } from "@/shared/config/colors";
 import { useT } from "@/shared/i18n";
-import { API_TEMPLATE_PRESETS } from "@/types/api-template";
 
 import { API_TAB_ANIMATION } from "../api-tab.animation";
 import { useTemplateForm } from "./useTemplateForm";
@@ -17,12 +16,18 @@ export function TemplateForm() {
   const {
     name,
     setName,
-    provider,
-    setProvider,
     model,
     setModel,
     apiKey,
     setApiKey,
+    detectStatus,
+    providerLabel,
+    resolvedBaseUrl,
+    isManual,
+    manualBaseUrl,
+    setManualBaseUrl,
+    baseUrlProbe,
+    baseUrlReady,
     isClearing,
     canSubmit,
     handleAdd,
@@ -77,47 +82,59 @@ export function TemplateForm() {
           className="rounded-xl border border-white/10 bg-background px-3 py-2 text-sm text-text-primary"
         />
 
-        <Text className="pb-1 pt-4 text-xs uppercase tracking-wide text-text-muted">
-          {t("apiTab.provider")}
-        </Text>
-        <View className="flex-row gap-2">
-          {Object.values(API_TEMPLATE_PRESETS).map((preset) => {
-            const isActive = preset.id === provider;
+        {/* Строка состояния детекта на месте удаленного переключателя */}
+        {detectStatus === "detecting" && (
+          <Text className="pt-4 text-sm text-text-muted">
+            {t("apiTab.detecting")}
+          </Text>
+        )}
 
-            return (
-              <Pressable
-                key={preset.id}
-                accessibilityRole="button"
-                accessibilityLabel={preset.label}
-                accessibilityState={{ selected: isActive }}
-                onPress={() => setProvider(preset.id)}
-                className={`flex-1 items-center rounded-xl border py-2 ${
-                  isActive
-                    ? "border-accent bg-accent"
-                    : "border-white/10 bg-background"
-                }`}
-              >
-                <Text
-                  className={`text-sm ${
-                    isActive ? "font-semibold text-white" : "text-text-primary"
-                  }`}
-                >
-                  {preset.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        {detectStatus === "resolved" && providerLabel && (
+          <Text className="pt-4 text-sm text-text-primary">{providerLabel}</Text>
+        )}
+
+        {isManual && (
+          <>
+            <Text className="pb-1 pt-4 text-xs uppercase tracking-wide text-text-muted">
+              {t("apiTab.baseUrl")}
+            </Text>
+            <TextInput
+              value={manualBaseUrl}
+              onChangeText={setManualBaseUrl}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+              placeholder={t("apiTab.baseUrlPlaceholder")}
+              placeholderTextColor={colors.placeholder}
+              className="rounded-xl border border-white/10 bg-background px-3 py-2 text-sm text-text-primary"
+            />
+            {detectStatus === "failed" && baseUrlProbe !== "fail" && (
+              <Text className="pt-1 text-xs text-text-muted">
+                {t("apiTab.detectFailed")}
+              </Text>
+            )}
+            {baseUrlProbe === "probing" && (
+              <Text className="pt-1 text-xs text-text-muted">
+                {t("apiTab.checkingBaseUrl")}
+              </Text>
+            )}
+            {baseUrlProbe === "fail" && (
+              <Text className="pt-1 text-xs text-red-400">
+                {t("apiTab.baseUrlNotCompatible")}
+              </Text>
+            )}
+          </>
+        )}
 
         <Text className="pb-1 pt-4 text-xs uppercase tracking-wide text-text-muted">
           {t("apiTab.model")}
         </Text>
         <ModelSelect
-          baseUrl={API_TEMPLATE_PRESETS[provider].baseUrl}
-          provider={provider}
+          baseUrl={resolvedBaseUrl}
           apiKey={apiKey}
           value={model}
           onChange={setModel}
+          disabled={!baseUrlReady}
         />
 
         <Text className="pb-1 pt-4 text-xs uppercase tracking-wide text-text-muted">

@@ -1,7 +1,6 @@
 import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
 
-import { API_TEMPLATE_PRESETS } from '@/types/api-template';
 import type {
   ApiTemplate,
   ApiTemplateProvider,
@@ -57,12 +56,14 @@ export async function getTemplate(
 export async function createTemplate(
   name: string,
   provider: ApiTemplateProvider,
+  baseUrl: string,
   model: string,
   apiKey: string,
 ): Promise<ApiTemplate> {
   const id = Crypto.randomUUID();
   const keyRef = `${KEY_PREFIX}${id}`;
-  const baseUrl = API_TEMPLATE_PRESETS[provider].baseUrl;
+  // baseUrl приходит из формы: детект по префиксу ключа или ручной ввод
+  // (прошедший probe на OpenAI-совместимость)
 
   await SecureStore.setItemAsync(keyRef, apiKey);
 
