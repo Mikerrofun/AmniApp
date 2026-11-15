@@ -1,16 +1,11 @@
-import { fetchAvailableModels } from './models';
-import type { ModelsFetcher } from './models.types';
+import { fetchAvailableModels } from "./models";
 import {
   fetchAnthropicModels,
   fetchCohereModels,
   fetchGeminiModels,
-} from './models-fetchers';
+} from "./models-fetchers";
+import type { ModelsFetcher } from "./models.types";
 
-/**
- * Реестр фетчеров моделей по provider id: известные провайдеры с
- * не-OpenAI списком моделей получают нативный запрос + свой парсер,
- * для всех остальных — дефолтный OpenAI-запрос (fetchAvailableModels).
- */
 export const MODELS_FETCHERS: Record<string, ModelsFetcher> = {
   anthropic: fetchAnthropicModels,
   gemini: fetchGeminiModels,

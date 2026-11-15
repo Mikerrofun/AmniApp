@@ -1,21 +1,19 @@
-import { fetch } from 'expo/fetch';
+import { fetch } from "expo/fetch";
 
-import { MODELS_REQUEST_TIMEOUT_MS } from './models.config';
+import { MODELS_REQUEST_TIMEOUT_MS } from "./models.config";
 import type {
   FetchAvailableModelsParams,
   FetchModelsErrorReason,
   FetchModelsResult,
-} from './models.types';
-import { parseAnthropicModelList } from './parse-anthropic-models';
-import { parseCohereModelList } from './parse-cohere-models';
-import { parseGeminiModelList } from './parse-gemini-models';
+} from "./models.types";
+import { parseAnthropicModelList } from "./parse-anthropic-models";
+import { parseCohereModelList } from "./parse-cohere-models";
+import { parseGeminiModelList } from "./parse-gemini-models";
 
-/** Нативный endpoint списка моделей Gemini (не OpenAI-совместимый) */
 const GEMINI_MODELS_URL =
-  'https://generativelanguage.googleapis.com/v1beta/models';
+  "https://generativelanguage.googleapis.com/v1beta/models";
 
-/** Нативный endpoint списка моделей Cohere (не OpenAI-совместимый) */
-const COHERE_MODELS_URL = 'https://api.cohere.ai/v1/models';
+const COHERE_MODELS_URL = "https://api.cohere.ai/v1/models";
 
 /**
  * Общая механика нативных запросов списка моделей: таймаут + внешний
@@ -32,7 +30,7 @@ async function fetchProviderJson(
   const controller = new AbortController();
   const onExternalAbort = () => controller.abort();
 
-  signal?.addEventListener('abort', onExternalAbort);
+  signal?.addEventListener("abort", onExternalAbort);
 
   const timeout = setTimeout(
     () => controller.abort(),
@@ -46,26 +44,26 @@ async function fetchProviderJson(
     });
 
     if (response.status === 401 || response.status === 403) {
-      return { ok: false, reason: 'unauthorized' };
+      return { ok: false, reason: "unauthorized" };
     }
 
     if (!response.ok) {
-      return { ok: false, reason: 'other' };
+      return { ok: false, reason: "other" };
     }
 
     return { ok: true, payload: await response.json() };
   } catch (error) {
     if (controller.signal.aborted) {
-      return { ok: false, reason: 'other' };
+      return { ok: false, reason: "other" };
     }
 
     return {
       ok: false,
-      reason: error instanceof TypeError ? 'network' : 'other',
+      reason: error instanceof TypeError ? "network" : "other",
     };
   } finally {
     clearTimeout(timeout);
-    signal?.removeEventListener('abort', onExternalAbort);
+    signal?.removeEventListener("abort", onExternalAbort);
   }
 }
 
@@ -80,7 +78,7 @@ export async function fetchAnthropicModels({
 }: FetchAvailableModelsParams): Promise<FetchModelsResult> {
   const result = await fetchProviderJson(
     `${baseUrl}/models`,
-    { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+    { "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
     signal,
   );
 
