@@ -35,11 +35,12 @@ useModelsStore (zustand, shared/lib/ai)
 
 | Файл | Роль |
 | --- | --- |
-| `shared/lib/ai/models.types.ts` | Типы результата запроса и статусов записи кэша |
-| `shared/lib/ai/models.config.ts` | Таймаут и дебаунс |
-| `shared/lib/ai/models.ts` | `fetchAvailableModels` — единственная точка сети |
-| `shared/lib/ai/normalize-models.ts` | `normalizeModelList` — чистая функция |
-| `shared/lib/ai/models-store.ts` | `useModelsStore` — кэш, дедупликация, аборт |
+| `shared/lib/ai/models-fetcher/models-fetcher.types.ts` | Типы результата запроса и статусов записи кэша |
+| `shared/lib/ai/models-fetcher/models-fetcher.config.ts` | Таймаут, дебаунс, нативные URL Gemini/Cohere |
+| `shared/lib/ai/models-fetcher/models-fetcher.ts` | `fetchAvailableModels` + нативные фетчеры anthropic/gemini/cohere, реестр `getModelsFetcher` |
+| `shared/lib/ai/models-fetcher/parsers/*` | Чистые парсеры списков моделей провайдеров |
+| `shared/lib/ai/models-fetcher/models-store.ts` | `useModelsStore` — кэш, дедупликация, аборт |
+| `shared/lib/ai/provider-detect/*` | Детект провайдера по префиксу ключа + `useBaseUrlValidation` |
 | `shared/components/ModelSelect/*` | `ModelSelect` + `useModelSelect` + конфиг + `filterModels` |
 | `app/(tabs)/api/components/TemplateForm/*` | Форма: `useTemplateForm` — триггеры и сбросы |
 | `schemas/api-template.ts` | `apiTemplateFormSchema` — валидация при сохранении |

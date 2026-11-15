@@ -25,3 +25,8 @@ export type FetchModelsErrorReason = 'network' | 'unauthorized' | 'other';
 export type FetchModelsResult =
   | { ok: true; models: string[] }
   | { ok: false; reason: FetchModelsErrorReason };
+
+/** Фетчер списка моделей: запрос + парсер, ошибки — в FetchModelsResult */
+export type ModelsFetcher = (
+  params: FetchAvailableModelsParams,
+) => Promise<FetchModelsResult>;

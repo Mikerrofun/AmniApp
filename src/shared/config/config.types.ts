@@ -1,26 +1,30 @@
-/** Провайдер шаблона API (OpenAI-совместимый протокол) */
-export type ApiTemplateProvider = 'openai' | 'openrouter';
+/**
+ * Провайдер шаблона API (OpenAI-совместимый протокол). Юнион расширен
+ * под все id реестра провайдеров + ручной режим; старые значения
+ * 'openai'/'openrouter' остаются валидными.
+ */
+export type ApiTemplateProvider =
+  | 'openai'
+  | 'openrouter'
+  | 'deepseek'
+  | 'groq'
+  | 'perplexity'
+  | 'huggingface'
+  | 'gemini'
+  | 'anthropic'
+  | 'cohere'
+  | 'custom';
 
-/** Пресет провайдера: baseUrl берется из пресета, не вводится вручную */
-export type ApiTemplatePreset = {
+/** Запись реестра провайдеров: префиксы ключей + OpenAI-совместимый baseUrl */
+export type ApiProviderConfig = {
   id: ApiTemplateProvider;
   label: string;
+  /**
+   * OpenAI-совместимый endpoint без завершающего слеша (запросы строятся
+   * конкатенацией `{baseUrl}/models`). Пустая строка — baseUrl вводит
+   * юзер (ручной режим custom).
+   */
   baseUrl: string;
-};
-
-/** Доступные пресеты провайдеров */
-export const API_TEMPLATE_PRESETS: Record<
-  ApiTemplateProvider,
-  ApiTemplatePreset
-> = {
-  openai: {
-    id: 'openai',
-    label: 'OpenAI',
-    baseUrl: 'https://api.openai.com/v1',
-  },
-  openrouter: {
-    id: 'openrouter',
-    label: 'OpenRouter',
-    baseUrl: 'https://openrouter.ai/api/v1',
-  },
+  /** Префиксы API-ключей для автоопределения; пустой массив — ручной режим */
+  prefixes: string[];
 };

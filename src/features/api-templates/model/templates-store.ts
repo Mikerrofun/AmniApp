@@ -25,10 +25,11 @@ export const useTemplatesStore = create<TemplatesState>((set) => ({
     }
   },
 
-  addTemplate: async (name, provider, model, apiKey) => {
+  addTemplate: async (name, provider, baseUrl, model, apiKey) => {
     const template = await templatesRepository.createTemplate(
       name,
       provider,
+      baseUrl,
       model,
       apiKey,
     );

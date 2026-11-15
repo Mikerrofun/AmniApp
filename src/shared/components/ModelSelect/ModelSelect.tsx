@@ -22,7 +22,7 @@ import { useModelSelect } from "./useModelSelect";
 const FALLBACK_POPOVER_WIDTH = 280;
 
 export function ModelSelect({
-  provider,
+  baseUrl,
   apiKey,
   value,
   onChange,
@@ -42,7 +42,7 @@ export function ModelSelect({
     isDropdownLocked,
     openDropdown,
     closeDropdown,
-  } = useModelSelect({ provider, apiKey, disabled });
+  } = useModelSelect({ baseUrl, apiKey, disabled });
 
   const handleOpen = () => {
     if (isDropdownLocked) return;

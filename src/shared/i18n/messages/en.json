@@ -47,7 +47,8 @@
     "subtitle": "API templates",
     "name": "Name",
     "namePlaceholder": "My template",
-    "provider": "Provider",
+    "baseUrl": "Base URL",
+    "baseUrlPlaceholder": "https://api.example.com/v1",
     "model": "Model",
     "modelPlaceholder": "gpt-4.1-mini",
     "apiKey": "API key",
@@ -57,7 +58,7 @@
     "empty": "No templates yet",
     "invalidForm": "Fill in all fields",
     "duplicateName": "A template with this name already exists",
-      "saveFailed": "Failed to save template",
+    "saveFailed": "Failed to save template",
     "deleteFailed": "Failed to delete template",
     "deleteTemplate": "Delete template"
   },

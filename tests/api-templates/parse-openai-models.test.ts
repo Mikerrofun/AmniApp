@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { normalizeModelList } from '../../src/shared/lib/ai/normalize-models';
+import { parseOpenaiModelList } from '../../src/shared/lib/ai/models-fetcher/parsers/parse-openai-models';
 
-describe('normalizeModelList', () => {
+describe('parseOpenaiModelList', () => {
   it('извлекает data[].id, делает trim, dedup и сортировку', () => {
-    const result = normalizeModelList({
+    const result = parseOpenaiModelList({
       data: [
         { id: 'gpt-4.1-mini' },
         { id: ' claude-3 ' },
@@ -18,7 +18,7 @@ describe('normalizeModelList', () => {
   });
 
   it('срезает ведущий «~» и «~/» и схлопывает дубли после среза', () => {
-    const result = normalizeModelList({
+    const result = parseOpenaiModelList({
       data: [
         { id: '~/gpt-4o' },
         { id: '~claude-3' },
@@ -31,7 +31,7 @@ describe('normalizeModelList', () => {
   });
 
   it('отбрасывает не-строки и пустые id', () => {
-    const result = normalizeModelList({
+    const result = parseOpenaiModelList({
       data: [{ id: 42 }, { id: null }, {}, { id: '   ' }, { id: 'm1' }],
     });
 
@@ -39,8 +39,8 @@ describe('normalizeModelList', () => {
   });
 
   it('возвращает пустой список для неожидаемого формата', () => {
-    assert.deepEqual(normalizeModelList(null), []);
-    assert.deepEqual(normalizeModelList({}), []);
-    assert.deepEqual(normalizeModelList({ data: 'nope' }), []);
+    assert.deepEqual(parseOpenaiModelList(null), []);
+    assert.deepEqual(parseOpenaiModelList({}), []);
+    assert.deepEqual(parseOpenaiModelList({ data: 'nope' }), []);
   });
 });
