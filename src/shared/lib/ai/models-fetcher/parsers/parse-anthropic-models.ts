@@ -1,4 +1,4 @@
-import type { ProviderModelsResponse } from './models.types';
+import type { ProviderModelsResponse } from '../models-fetcher.types';
 
 /**
  * Парсер нативного ответа Anthropic GET /models: `data[].id` — тот же

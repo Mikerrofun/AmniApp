@@ -9,7 +9,8 @@ tests/
 ├── api-templates/          # Тесты для фичи "API Templates & Model Selection"
 │   ├── api-template-validation.test.ts  # Валидация формы создания шаблона
 │   ├── filter-models.test.ts            # Фильтрация списка моделей
-│   └── normalize-models.test.ts         # Нормализация данных от API провайдеров
+│   ├── parse-openai-models.test.ts      # Парсинг списка моделей OpenAI-формата
+│   └── provider-detect.test.ts          # Определение провайдера по префиксу ключа
 └── README.md
 ```
 

@@ -1,22 +1,18 @@
 import { z } from 'zod';
 
+import type { ApiTemplateProvider } from '@/shared/config/config.types';
+import { PROVIDER_REGISTRY } from '@/shared/config/providers.config';
+
 /**
- * Провайдеры шаблона API: все id реестра PROVIDER_REGISTRY
- * (shared/config/providers.config.ts) + ручной режим 'custom'.
- * Синхронизирован с реестром вручную — реестр расширяется редко.
+ * Провайдеры шаблона API выводятся из реестра PROVIDER_REGISTRY —
+ * единственного источника id провайдеров; отдельный список не дублируется.
  */
-export const apiTemplateProviderSchema = z.enum([
-  'openai',
-  'openrouter',
-  'deepseek',
-  'groq',
-  'perplexity',
-  'huggingface',
-  'gemini',
-  'anthropic',
-  'cohere',
-  'custom',
-]);
+const providerIds = PROVIDER_REGISTRY.map((provider) => provider.id) as [
+  ApiTemplateProvider,
+  ...ApiTemplateProvider[],
+];
+
+export const apiTemplateProviderSchema = z.enum(providerIds);
 
 export type ApiTemplateProviderId = z.infer<typeof apiTemplateProviderSchema>;
 

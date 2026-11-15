@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-import { getModelsFetcher } from "./models-fetchers.config";
+import { getModelsFetcher } from "./models-fetcher";
 import type { ModelsState } from "./models-store.types";
 
 export const modelsCacheKey = (baseUrl: string, apiKey: string): string =>

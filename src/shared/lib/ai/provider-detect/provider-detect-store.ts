@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import { fetchAvailableModels } from './models';
+import { fetchAvailableModels } from '../models-fetcher';
 import { resolveProvider } from './provider-detect';
 import type { ProviderDetectState } from './provider-detect-store.types';
 

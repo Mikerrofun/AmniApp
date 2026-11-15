@@ -1,4 +1,4 @@
-import type { ProviderModelsResponse } from "./models.types";
+import type { ProviderModelsResponse } from "../models-fetcher.types";
 
 /**
  * Нормализует список моделей из ответа провайдера: берет `data[].id`,
@@ -8,7 +8,7 @@ import type { ProviderModelsResponse } from "./models.types";
  * Вынесена в отдельный файл, чтобы тестировать без импорта клиента
  * (models.ts тянет expo/fetch, недоступный в node-тестах).
  */
-export function normalizeModelList(payload: unknown): string[] {
+export function parseOpenaiModelList(payload: unknown): string[] {
   const data = (payload as ProviderModelsResponse | null)?.data;
 
   if (!Array.isArray(data)) return [];

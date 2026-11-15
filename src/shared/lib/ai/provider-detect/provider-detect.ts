@@ -3,7 +3,7 @@ import { PROVIDER_REGISTRY } from '@/shared/config/providers.config';
 import type { ApiProviderConfig } from '@/shared/config/config.types';
 import { PROVIDER_DETECT_MIN_KEY_LENGTH } from './provider-detect.config';
 import type { ProviderDetectResult } from './provider-detect.types';
-import type { ModelsFetcher } from './models.types';
+import type { ModelsFetcher } from '../models-fetcher';
 
 /** Длина самого длинного префикса провайдера, совпавшего с ключом */
 const matchedPrefixLength = (provider: ApiProviderConfig, key: string): number =>

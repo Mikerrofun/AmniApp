@@ -4,26 +4,27 @@ import { useTemplatesStore } from "@/features/api-templates";
 import { createApiTemplateFormSchema } from "@/schemas/api-template";
 import { showToast } from "@/shared/components/ui/Toast";
 import { useT } from "@/shared/i18n";
-import { fetchAvailableModels } from "@/shared/lib/ai/models";
-import { MODELS_FETCH_DEBOUNCE_MS } from "@/shared/lib/ai/models.config";
-import { useModelsStore } from "@/shared/lib/ai/models-store";
-import { PROVIDER_DETECT_DEBOUNCE_MS } from "@/shared/lib/ai/provider-detect.config";
-import { useProviderDetect } from "@/shared/lib/ai/use-provider-detect";
+import {
+  MODELS_FETCH_DEBOUNCE_MS,
+  useModelsStore,
+} from "@/shared/lib/ai/models-fetcher";
+import {
+  useBaseUrlValidation,
+  useProviderDetect,
+} from "@/shared/lib/ai/provider-detect";
 
 import { API_TAB_ANIMATION } from "../api-tab.animation";
 
 import type { ApiTemplateProvider } from "@/types/api-template";
 
-/** Статус обязательного probe ручного baseUrl */
-export type BaseUrlProbeStatus = "idle" | "probing" | "ok" | "fail";
-
 /**
  * Форма создания шаблона: поля, zod-валидация, addTemplate. Провайдер и
- * baseUrl определяются автоматически по префиксу ключа (useProviderDetect);
- * нераспознанный ключ включает ручной ввод baseUrl с обязательным probe.
- * Список моделей запрашивается по ключу (debounce, кэш в models-store).
- * Ошибки — тост; при успехе поля гаснут (isClearing), очищаются
- * невидимыми и возвращаются. Вся логика — здесь, компонент только рендерит.
+ * baseUrl определяются автоматически по префиксу ключа; нераспознанный
+ * ключ включает ручной ввод baseUrl. Валидация пары «baseUrl + ключ» —
+ * единый механизм useBaseUrlValidation для обоих режимов. Список моделей
+ * запрашивается по ключу (debounce, кэш в models-store). Ошибки — тост;
+ * при успехе поля гаснут (isClearing), очищаются невидимыми и
+ * возвращаются. Вся логика — здесь, компонент только рендерит.
  */
 export function useTemplateForm() {
   const t = useT();
@@ -33,27 +34,32 @@ export function useTemplateForm() {
   const [model, setModel] = useState("");
   const [apiKey, setApiKeyState] = useState("");
   const [manualBaseUrl, setManualBaseUrlState] = useState("");
-  const [baseUrlProbe, setBaseUrlProbe] = useState<BaseUrlProbeStatus>("idle");
   const [isClearing, setIsClearing] = useState(false);
   const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const probeControllerRef = useRef<AbortController | null>(null);
 
   const detect = useProviderDetect(apiKey);
 
   // Ручной режим: префикс не распознан или probe коллизии неуспешен
   const isManual = detect.status === "unknown" || detect.status === "failed";
-  const resolvedBaseUrl =
-    detect.status === "resolved" && detect.baseUrl
-      ? detect.baseUrl
-      : manualBaseUrl.trim();
+
+  // Единая валидация baseUrl: auto — детект по префиксу, manual —
+  // обязательный probe ручного ввода. Статус только ok/fail/idle.
+  const {
+    status: baseUrlStatus,
+    baseUrl: validatedBaseUrl,
+  } = useBaseUrlValidation({
+    mode: isManual ? "manual" : "auto",
+    apiKey,
+    manualBaseUrl: isManual ? manualBaseUrl : undefined,
+  });
+
   const providerId: ApiTemplateProvider = detect.provider?.id ?? "custom";
-  const baseUrlReady =
-    detect.status === "resolved" || baseUrlProbe === "ok";
+  const resolvedBaseUrl = validatedBaseUrl;
+  const baseUrlReady = baseUrlStatus === "ok";
 
   useEffect(() => {
     return () => {
       if (clearTimerRef.current !== null) clearTimeout(clearTimerRef.current);
-      probeControllerRef.current?.abort();
     };
   }, []);
 
@@ -65,11 +71,8 @@ export function useTemplateForm() {
     apiKey.trim() !== "" &&
     baseUrlReady;
 
-  // Ручной baseUrl: очистка поля сбрасывает probe (событийно, не в эффекте)
   const setManualBaseUrl = useCallback((text: string) => {
     setManualBaseUrlState(text);
-
-    if (text.trim() === "") setBaseUrlProbe("idle");
   }, []);
 
   const setApiKey = useCallback(
@@ -79,7 +82,6 @@ export function useTemplateForm() {
         useModelsStore.getState().cancelKey(resolvedBaseUrl, apiKey);
         // Новый ключ — новая попытка детекта: ручной baseUrl сбрасывается
         setManualBaseUrl("");
-        setBaseUrlProbe("idle");
       }
 
       setApiKeyState(text);
@@ -101,43 +103,6 @@ export function useTemplateForm() {
 
     return () => clearTimeout(timer);
   }, [apiKey, providerId, resolvedBaseUrl, baseUrlReady]);
-
-  // Обязательный probe ручного baseUrl: после остановки ввода. Неуспех
-  // (401/403/сеть/не-OpenAI-формат) — ошибка на поле + toast, сабмит
-  // заблокирован через canSubmit.
-  useEffect(() => {
-    if (!isManual) return;
-
-    const baseUrl = manualBaseUrl.trim();
-
-    if (baseUrl === "" || apiKey.trim() === "") return;
-
-    const timer = setTimeout(() => {
-      probeControllerRef.current?.abort();
-      const controller = new AbortController();
-      probeControllerRef.current = controller;
-
-      setBaseUrlProbe("probing");
-
-      void fetchAvailableModels({ baseUrl, apiKey, signal: controller.signal }).then(
-        (result) => {
-          if (controller.signal.aborted) return;
-
-          if (result.ok) {
-            setBaseUrlProbe("ok");
-          } else {
-            setBaseUrlProbe("fail");
-            showToast(t("apiTab.baseUrlNotCompatible"));
-          }
-        },
-      );
-    }, PROVIDER_DETECT_DEBOUNCE_MS);
-
-    return () => {
-      clearTimeout(timer);
-      probeControllerRef.current?.abort();
-    };
-  }, [isManual, manualBaseUrl, apiKey, t]);
 
   const handleAdd = useCallback(async () => {
     // Повторное нажатие во время анимации очистки — защита от двойного add
@@ -176,7 +141,6 @@ export function useTemplateForm() {
         setModel("");
         setApiKeyState("");
         setManualBaseUrl("");
-        setBaseUrlProbe("idle");
         setIsClearing(false);
       }, API_TAB_ANIMATION.formFadeOut);
     } catch (error) {
@@ -210,13 +174,11 @@ export function useTemplateForm() {
     setModel,
     apiKey,
     setApiKey,
-    detectStatus: detect.status,
     providerLabel: detect.provider?.label,
     resolvedBaseUrl,
     isManual,
     manualBaseUrl,
     setManualBaseUrl,
-    baseUrlProbe,
     baseUrlReady,
     isClearing,
     canSubmit,

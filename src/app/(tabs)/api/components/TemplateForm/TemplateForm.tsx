@@ -1,7 +1,9 @@
 import { Pressable, Text, TextInput, View } from "react-native";
 import Animated, {
-    useAnimatedStyle,
-    withTiming,
+  FadeInUp,
+  FadeOut,
+  useAnimatedStyle,
+  withTiming,
 } from "react-native-reanimated";
 
 import { ModelSelect } from "@/shared/components/ModelSelect";
@@ -20,13 +22,11 @@ export function TemplateForm() {
     setModel,
     apiKey,
     setApiKey,
-    detectStatus,
     providerLabel,
     resolvedBaseUrl,
     isManual,
     manualBaseUrl,
     setManualBaseUrl,
-    baseUrlProbe,
     baseUrlReady,
     isClearing,
     canSubmit,
@@ -82,19 +82,24 @@ export function TemplateForm() {
           className="rounded-xl border border-white/10 bg-background px-3 py-2 text-sm text-text-primary"
         />
 
-        {/* Строка состояния детекта на месте удаленного переключателя */}
-        {detectStatus === "detecting" && (
-          <Text className="pt-4 text-sm text-text-muted">
-            {t("apiTab.detecting")}
-          </Text>
+        {providerLabel && (
+          <Animated.View
+            entering={FadeInUp.duration(API_TAB_ANIMATION.listEnter)}
+            exiting={FadeOut.duration(API_TAB_ANIMATION.listExit)}
+          >
+            <Text className="pt-4 text-sm text-text-primary">
+              {providerLabel}
+            </Text>
+          </Animated.View>
         )}
 
-        {detectStatus === "resolved" && providerLabel && (
-          <Text className="pt-4 text-sm text-text-primary">{providerLabel}</Text>
-        )}
-
+        {/* Ручной ввод baseUrl появляется, только когда провайдер по ключу
+            не определен; вход/выход — теми же анимациями, что у списка */}
         {isManual && (
-          <>
+          <Animated.View
+            entering={FadeInUp.duration(API_TAB_ANIMATION.listEnter)}
+            exiting={FadeOut.duration(API_TAB_ANIMATION.listExit)}
+          >
             <Text className="pb-1 pt-4 text-xs uppercase tracking-wide text-text-muted">
               {t("apiTab.baseUrl")}
             </Text>
@@ -108,22 +113,7 @@ export function TemplateForm() {
               placeholderTextColor={colors.placeholder}
               className="rounded-xl border border-white/10 bg-background px-3 py-2 text-sm text-text-primary"
             />
-            {detectStatus === "failed" && baseUrlProbe !== "fail" && (
-              <Text className="pt-1 text-xs text-text-muted">
-                {t("apiTab.detectFailed")}
-              </Text>
-            )}
-            {baseUrlProbe === "probing" && (
-              <Text className="pt-1 text-xs text-text-muted">
-                {t("apiTab.checkingBaseUrl")}
-              </Text>
-            )}
-            {baseUrlProbe === "fail" && (
-              <Text className="pt-1 text-xs text-red-400">
-                {t("apiTab.baseUrlNotCompatible")}
-              </Text>
-            )}
-          </>
+          </Animated.View>
         )}
 
         <Text className="pb-1 pt-4 text-xs uppercase tracking-wide text-text-muted">

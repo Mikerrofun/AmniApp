@@ -1,19 +1,10 @@
 import { useEffect, useRef } from 'react';
 
-import type { ApiProviderConfig } from '@/shared/config/config.types';
 import { getProviderConfig } from '@/shared/config/providers.config';
 
 import { PROVIDER_DETECT_DEBOUNCE_MS } from './provider-detect.config';
 import { useProviderDetectStore } from './provider-detect-store';
-import type { ProviderDetectStatus } from './provider-detect-store.types';
-
-type UseProviderDetectResult = {
-  status: ProviderDetectStatus;
-  /** Конфиг распознанного провайдера (для лейбла); нет при остальных статусах */
-  provider?: ApiProviderConfig;
-  /** OpenAI-совместимый baseUrl распознанного провайдера */
-  baseUrl?: string;
-};
+import type { UseProviderDetectResult } from './use-provider-detect.types';
 
 /**
  * Автоопределение провайдера по вставленному ключу: debounce из конфига

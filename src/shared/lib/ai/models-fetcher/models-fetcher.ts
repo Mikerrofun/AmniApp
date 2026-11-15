@@ -1,19 +1,20 @@
 import { fetch } from "expo/fetch";
 
-import { MODELS_REQUEST_TIMEOUT_MS } from "./models.config";
+import { parseAnthropicModelList } from "./parsers/parse-anthropic-models";
+import { parseCohereModelList } from "./parsers/parse-cohere-models";
+import { parseGeminiModelList } from "./parsers/parse-gemini-models";
+import { parseOpenaiModelList } from "./parsers/parse-openai-models";
+import {
+  COHERE_MODELS_URL,
+  GEMINI_MODELS_URL,
+  MODELS_REQUEST_TIMEOUT_MS,
+} from "./models-fetcher.config";
 import type {
   FetchAvailableModelsParams,
   FetchModelsErrorReason,
   FetchModelsResult,
-} from "./models.types";
-import { parseAnthropicModelList } from "./parse-anthropic-models";
-import { parseCohereModelList } from "./parse-cohere-models";
-import { parseGeminiModelList } from "./parse-gemini-models";
-
-const GEMINI_MODELS_URL =
-  "https://generativelanguage.googleapis.com/v1beta/models";
-
-const COHERE_MODELS_URL = "https://api.cohere.ai/v1/models";
+  ModelsFetcher,
+} from "./models-fetcher.types";
 
 /**
  * Общая механика нативных запросов списка моделей: таймаут + внешний
@@ -52,6 +53,59 @@ async function fetchProviderJson(
     }
 
     return { ok: true, payload: await response.json() };
+  } catch (error) {
+    if (controller.signal.aborted) {
+      return { ok: false, reason: "other" };
+    }
+
+    return {
+      ok: false,
+      reason: error instanceof TypeError ? "network" : "other",
+    };
+  } finally {
+    clearTimeout(timeout);
+    signal?.removeEventListener("abort", onExternalAbort);
+  }
+}
+
+/**
+ * Дефолтный (OpenAI-совместимый) фетчер: нативный fetch с устройства
+ * `GET {baseUrl}/models` с `Authorization: Bearer` (тот же паттерн,
+ * что openai-compat-client — без бекенда, ключ никуда не логируется).
+ * Ошибки классифицируются в результат, а не выбрасываются наверх.
+ */
+export async function fetchAvailableModels({
+  baseUrl,
+  apiKey,
+  signal,
+}: FetchAvailableModelsParams): Promise<FetchModelsResult> {
+  const controller = new AbortController();
+  const onExternalAbort = () => controller.abort();
+
+  signal?.addEventListener("abort", onExternalAbort);
+
+  const timeout = setTimeout(
+    () => controller.abort(),
+    MODELS_REQUEST_TIMEOUT_MS,
+  );
+
+  try {
+    const response = await fetch(`${baseUrl}/models`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      signal: controller.signal,
+    });
+
+    if (response.status === 401 || response.status === 403) {
+      return { ok: false, reason: "unauthorized" };
+    }
+
+    if (!response.ok) {
+      return { ok: false, reason: "other" };
+    }
+
+    const payload = await response.json();
+
+    return { ok: true, models: parseOpenaiModelList(payload) };
   } catch (error) {
     if (controller.signal.aborted) {
       return { ok: false, reason: "other" };
@@ -121,3 +175,14 @@ export async function fetchCohereModels({
 
   return { ok: true, models: parseCohereModelList(result.payload) };
 }
+
+/** Нативные фетчеры провайдеров с не-OpenAI-совместимым списком моделей */
+export const MODELS_FETCHERS: Record<string, ModelsFetcher> = {
+  anthropic: fetchAnthropicModels,
+  gemini: fetchGeminiModels,
+  cohere: fetchCohereModels,
+};
+
+/** Фетчер по provider id; неизвестный id — дефолтный OpenAI-фетчер */
+export const getModelsFetcher = (providerId: string): ModelsFetcher =>
+  MODELS_FETCHERS[providerId] ?? fetchAvailableModels;

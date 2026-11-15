@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 
-import { modelsCacheKey, useModelsStore } from "@/shared/lib/ai/models-store";
+import { modelsCacheKey, useModelsStore } from "@/shared/lib/ai/models-fetcher";
 
 import { EMPTY_MODELS } from "./ModelSelect.config";
 import type { ModelSelectProps } from "./ModelSelect.types";
