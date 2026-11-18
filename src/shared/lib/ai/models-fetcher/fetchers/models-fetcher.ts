@@ -1,10 +1,12 @@
 import { fetch } from "expo/fetch";
 
-import { parseAnthropicModelList } from "./parsers/parse-anthropic-models";
-import { parseCohereModelList } from "./parsers/parse-cohere-models";
-import { parseGeminiModelList } from "./parsers/parse-gemini-models";
-import { parseOpenaiModelList } from "./parsers/parse-openai-models";
+import { parseAnthropicModelList } from "../parsers/parse-anthropic-models";
+import { parseCohereModelList } from "../parsers/parse-cohere-models";
+import { parseGeminiModelList } from "../parsers/parse-gemini-models";
+import { parseOpenaiModelList } from "../parsers/parse-openai-models";
 import {
+  CHAT_COMPLETIONS_PATH,
+  CHAT_COMPLETIONS_PROBE_BODY,
   COHERE_MODELS_URL,
   GEMINI_MODELS_URL,
   MODELS_REQUEST_TIMEOUT_MS,
@@ -14,6 +16,7 @@ import type {
   FetchModelsErrorReason,
   FetchModelsResult,
   ModelsFetcher,
+  ProbeChatCompletionsResult,
 } from "./models-fetcher.types";
 
 /**
@@ -106,6 +109,59 @@ export async function fetchAvailableModels({
     const payload = await response.json();
 
     return { ok: true, models: parseOpenaiModelList(payload) };
+  } catch (error) {
+    if (controller.signal.aborted) {
+      return { ok: false, reason: "other" };
+    }
+
+    return {
+      ok: false,
+      reason: error instanceof TypeError ? "network" : "other",
+    };
+  } finally {
+    clearTimeout(timeout);
+    signal?.removeEventListener("abort", onExternalAbort);
+  }
+}
+
+/**
+ * Fallback-проверка совместимости endpoint без GET /models: POST
+ * `{baseUrl}/chat/completions`, успех — строго HTTP 200 (тело не
+ * валидируем). Классификация ошибок повторяет fetchAvailableModels.
+ */
+export async function probeChatCompletions({
+  baseUrl,
+  apiKey,
+  signal,
+}: FetchAvailableModelsParams): Promise<ProbeChatCompletionsResult> {
+  const controller = new AbortController();
+  const onExternalAbort = () => controller.abort();
+
+  signal?.addEventListener("abort", onExternalAbort);
+
+  const timeout = setTimeout(
+    () => controller.abort(),
+    MODELS_REQUEST_TIMEOUT_MS,
+  );
+
+  try {
+    const response = await fetch(`${baseUrl}${CHAT_COMPLETIONS_PATH}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: CHAT_COMPLETIONS_PROBE_BODY,
+      signal: controller.signal,
+    });
+
+    if (response.status === 401 || response.status === 403) {
+      return { ok: false, reason: "unauthorized" };
+    }
+
+    return response.status === 200
+      ? { ok: true }
+      : { ok: false, reason: "other" };
   } catch (error) {
     if (controller.signal.aborted) {
       return { ok: false, reason: "other" };

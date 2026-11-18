@@ -1,10 +1,5 @@
 import { Pressable, Text, TextInput, View } from "react-native";
-import Animated, {
-  FadeInUp,
-  FadeOut,
-  useAnimatedStyle,
-  withTiming,
-} from "react-native-reanimated";
+import Animated, { useAnimatedStyle, withTiming } from "react-native-reanimated";
 
 import { ModelSelect } from "@/shared/components/ModelSelect";
 import { colors } from "@/shared/config/colors";
@@ -22,11 +17,9 @@ export function TemplateForm() {
     setModel,
     apiKey,
     setApiKey,
-    providerLabel,
+    baseUrl,
+    setBaseUrl,
     resolvedBaseUrl,
-    isManual,
-    manualBaseUrl,
-    setManualBaseUrl,
     baseUrlReady,
     isClearing,
     canSubmit,
@@ -82,39 +75,19 @@ export function TemplateForm() {
           className="rounded-xl border border-white/10 bg-background px-3 py-2 text-sm text-text-primary"
         />
 
-        {providerLabel && (
-          <Animated.View
-            entering={FadeInUp.duration(API_TAB_ANIMATION.listEnter)}
-            exiting={FadeOut.duration(API_TAB_ANIMATION.listExit)}
-          >
-            <Text className="pt-4 text-sm text-text-primary">
-              {providerLabel}
-            </Text>
-          </Animated.View>
-        )}
-
-        {/* Ручной ввод baseUrl появляется, только когда провайдер по ключу
-            не определен; вход/выход — теми же анимациями, что у списка */}
-        {isManual && (
-          <Animated.View
-            entering={FadeInUp.duration(API_TAB_ANIMATION.listEnter)}
-            exiting={FadeOut.duration(API_TAB_ANIMATION.listExit)}
-          >
-            <Text className="pb-1 pt-4 text-xs uppercase tracking-wide text-text-muted">
-              {t("apiTab.baseUrl")}
-            </Text>
-            <TextInput
-              value={manualBaseUrl}
-              onChangeText={setManualBaseUrl}
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="url"
-              placeholder={t("apiTab.baseUrlPlaceholder")}
-              placeholderTextColor={colors.placeholder}
-              className="rounded-xl border border-white/10 bg-background px-3 py-2 text-sm text-text-primary"
-            />
-          </Animated.View>
-        )}
+        <Text className="pb-1 pt-4 text-xs uppercase tracking-wide text-text-muted">
+          {t("apiTab.baseUrl")}
+        </Text>
+        <TextInput
+          value={baseUrl}
+          onChangeText={setBaseUrl}
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="url"
+          placeholder={t("apiTab.baseUrlPlaceholder")}
+          placeholderTextColor={colors.placeholder}
+          className="rounded-xl border border-white/10 bg-background px-3 py-2 text-sm text-text-primary"
+        />
 
         <Text className="pb-1 pt-4 text-xs uppercase tracking-wide text-text-muted">
           {t("apiTab.model")}

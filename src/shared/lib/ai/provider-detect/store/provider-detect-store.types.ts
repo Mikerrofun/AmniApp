@@ -1,4 +1,4 @@
-import type { ProviderDetectResult } from './provider-detect.types';
+import type { ProviderDetectResult } from '../detect/provider-detect.types';
 
 /** Статус определения провайдера для одной записи кэша (по apiKey) */
 export type ProviderDetectStatus =

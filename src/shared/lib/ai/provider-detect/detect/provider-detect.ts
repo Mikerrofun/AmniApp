@@ -3,7 +3,7 @@ import { PROVIDER_REGISTRY } from '@/shared/config/providers.config';
 import type { ApiProviderConfig } from '@/shared/config/config.types';
 import { PROVIDER_DETECT_MIN_KEY_LENGTH } from './provider-detect.config';
 import type { ProviderDetectResult } from './provider-detect.types';
-import type { ModelsFetcher } from '../models-fetcher';
+import type { ModelsFetcher } from '../../models-fetcher';
 
 /** Длина самого длинного префикса провайдера, совпавшего с ключом */
 const matchedPrefixLength = (provider: ApiProviderConfig, key: string): number =>
@@ -42,14 +42,16 @@ export function matchProviders(apiKey: string): ApiProviderConfig[] {
 /**
  * Определяет провайдера по ключу. Один кандидат — resolved без запроса;
  * коллизия префиксов — параллельный probe `GET {baseUrl}/models` каждому
- * кандидату через переиспользованный fetchAvailableModels: побеждает
- * первый успешный. Отправка ключа нескольким серверам параллельно —
+ * кандидату его собственным фетчером из резолвера (нативные списки
+ * anthropic/gemini/cohere): побеждает первый успешный, его models идут
+ * в результат. Отправка ключа нескольким серверам параллельно —
  * осознанный privacy-трейд-офф. Все probe неуспешны — failed.
- * Фетчер передается параметром, чтобы логика тестировалась без expo/fetch.
+ * Резолвер фетчеров передается параметром, чтобы логика тестировалась
+ * без expo/fetch.
  */
 export async function resolveProvider(
   apiKey: string,
-  fetchModels: ModelsFetcher,
+  resolveFetcher: (providerId: string) => ModelsFetcher,
   signal?: AbortSignal,
 ): Promise<ProviderDetectResult> {
   if (apiKey.trim().length < PROVIDER_DETECT_MIN_KEY_LENGTH) {
@@ -67,11 +69,12 @@ export async function resolveProvider(
       status: 'resolved',
       providerId: candidate.id,
       baseUrl: candidate.baseUrl,
+      models: [],
     };
   }
 
   const probes = candidates.map(async (candidate) => {
-    const result = await fetchModels({
+    const result = await resolveFetcher(candidate.id)({
       baseUrl: candidate.baseUrl,
       apiKey,
       signal,
@@ -79,7 +82,7 @@ export async function resolveProvider(
 
     if (!result.ok) throw new Error(`probe failed: ${result.reason}`);
 
-    return candidate;
+    return { candidate, models: result.models };
   });
 
   const winner = await firstFulfilled(probes);
@@ -88,8 +91,9 @@ export async function resolveProvider(
 
   return {
     status: 'resolved',
-    providerId: winner.id,
-    baseUrl: winner.baseUrl,
+    providerId: winner.candidate.id,
+    baseUrl: winner.candidate.baseUrl,
+    models: winner.models,
   };
 }
 

@@ -5,7 +5,7 @@ import { createApiTemplateFormSchema } from "@/schemas/api-template";
 import { showToast } from "@/shared/components/ui/Toast";
 import { useT } from "@/shared/i18n";
 import {
-  MODELS_FETCH_DEBOUNCE_MS,
+  modelsCacheKey,
   useModelsStore,
 } from "@/shared/lib/ai/models-fetcher";
 import {
@@ -18,13 +18,15 @@ import { API_TAB_ANIMATION } from "../api-tab.animation";
 import type { ApiTemplateProvider } from "@/types/api-template";
 
 /**
- * Форма создания шаблона: поля, zod-валидация, addTemplate. Провайдер и
- * baseUrl определяются автоматически по префиксу ключа; нераспознанный
- * ключ включает ручной ввод baseUrl. Валидация пары «baseUrl + ключ» —
- * единый механизм useBaseUrlValidation для обоих режимов. Список моделей
- * запрашивается по ключу (debounce, кэш в models-store). Ошибки — тост;
- * при успехе поля гаснут (isClearing), очищаются невидимыми и
- * возвращаются. Вся логика — здесь, компонент только рендерит.
+ * Форма создания шаблона: поля, zod-валидация, addTemplate. Провайдер
+ * определяется по префиксу ключа и не меняется при правке baseUrl.
+ * Поле baseUrl одно и всегда видимо: авто-детект подставляет реестровый
+ * baseUrl, пока поле не тронуто юзером; измененное значение уходит в
+ * probe хука useBaseUrlValidation. Список моделей запрашивается только
+ * когда endpoint отдал список (modelsAvailable); при fallback-only
+ * endpoint модель вводят вручную. Ошибки — тост; при успехе поля гаснут
+ * (isClearing), очищаются невидимыми и возвращаются. Вся логика — здесь,
+ * компонент только рендерит.
  */
 export function useTemplateForm() {
   const t = useT();
@@ -33,29 +35,44 @@ export function useTemplateForm() {
   const [name, setName] = useState("");
   const [model, setModel] = useState("");
   const [apiKey, setApiKeyState] = useState("");
-  const [manualBaseUrl, setManualBaseUrlState] = useState("");
+  const [baseUrl, setBaseUrlState] = useState("");
   const [isClearing, setIsClearing] = useState(false);
   const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const detect = useProviderDetect(apiKey);
 
-  // Ручной режим: префикс не распознан или probe коллизии неуспешен
-  const isManual = detect.status === "unknown" || detect.status === "failed";
-
-  // Единая валидация baseUrl: auto — детект по префиксу, manual —
-  // обязательный probe ручного ввода. Статус только ok/fail/idle.
   const {
     status: baseUrlStatus,
-    baseUrl: validatedBaseUrl,
-  } = useBaseUrlValidation({
-    mode: isManual ? "manual" : "auto",
-    apiKey,
-    manualBaseUrl: isManual ? manualBaseUrl : undefined,
-  });
+    baseUrl: resolvedBaseUrl,
+    modelsAvailable,
+  } = useBaseUrlValidation({ apiKey, baseUrl });
 
   const providerId: ApiTemplateProvider = detect.provider?.id ?? "custom";
-  const resolvedBaseUrl = validatedBaseUrl;
   const baseUrlReady = baseUrlStatus === "ok";
+
+  // Доверенная пара: детект resolved и поле совпадает с реестровым
+  // baseUrl — схема не требует заполнения (оно и так заполнено)
+  const isTrusted =
+    detect.status === "resolved" &&
+    detect.baseUrl !== undefined &&
+    baseUrl.trim() === detect.baseUrl;
+
+  // Последнее авто-подставленное значение: поле считается «не тронутым
+  // юзером», пока оно пустое или равно предыдущему авто-значению
+  const lastAutoBaseUrlRef = useRef("");
+
+  // Префилл: детект resolved → реестровый baseUrl в поле, если юзер его
+  // не правил; отредактированное значение не трогается — оно уйдет в probe
+  useEffect(() => {
+    if (detect.status !== "resolved" || !detect.baseUrl) return;
+
+    const current = baseUrl.trim();
+
+    if (current === "" || current === lastAutoBaseUrlRef.current) {
+      lastAutoBaseUrlRef.current = detect.baseUrl;
+      setBaseUrlState(detect.baseUrl);
+    }
+  }, [detect.status, detect.baseUrl, baseUrl]);
 
   useEffect(() => {
     return () => {
@@ -63,16 +80,15 @@ export function useTemplateForm() {
     };
   }, []);
 
-  // Кнопка активна, только когда заполнены все поля и baseUrl определен
-  // (детект resolved ИЛИ ручной baseUrl прошел probe)
+  // Кнопка активна, только когда заполнены все поля и baseUrl проверен
   const canSubmit =
     name.trim() !== "" &&
     model.trim() !== "" &&
     apiKey.trim() !== "" &&
     baseUrlReady;
 
-  const setManualBaseUrl = useCallback((text: string) => {
-    setManualBaseUrlState(text);
+  const setBaseUrl = useCallback((text: string) => {
+    setBaseUrlState(text);
   }, []);
 
   const setApiKey = useCallback(
@@ -80,36 +96,66 @@ export function useTemplateForm() {
       if (text !== apiKey) {
         setModel("");
         useModelsStore.getState().cancelKey(resolvedBaseUrl, apiKey);
-        // Новый ключ — новая попытка детекта: ручной baseUrl сбрасывается
-        setManualBaseUrl("");
+        // Новый ключ — новая попытка детекта: поле baseUrl очищается
+        lastAutoBaseUrlRef.current = "";
+        setBaseUrlState("");
       }
 
       setApiKeyState(text);
     },
-    [apiKey, resolvedBaseUrl, setManualBaseUrl],
+    [apiKey, resolvedBaseUrl],
   );
 
-  // Авто-запрос списка моделей: после остановки ввода ключа, когда
-  // baseUrl определен. Повторный ввод того же ключа повторного запроса
-  // не делает (кэш стора по baseUrl|apiKey).
+  // Авто-запрос списка моделей: сразу, как только baseUrl проверен и
+  // endpoint отдал список — второй debounce не нужен, ввод ключа уже
+  // отфильтрован debounce детекта. При fallback-only endpoint запросать
+  // список бессмысленно. Повторный вызов повторного запроса не делает
+  // (кэш стора по baseUrl|apiKey + in-flight дедупликация).
   useEffect(() => {
-    if (!apiKey.trim() || !baseUrlReady || resolvedBaseUrl === "") return;
+    if (
+      !apiKey.trim() ||
+      !baseUrlReady ||
+      !modelsAvailable ||
+      resolvedBaseUrl === ""
+    ) {
+      return;
+    }
 
-    const timer = setTimeout(() => {
-      void useModelsStore
-        .getState()
-        .ensureModels(providerId, resolvedBaseUrl, apiKey);
-    }, MODELS_FETCH_DEBOUNCE_MS);
+    void useModelsStore
+      .getState()
+      .ensureModels(providerId, resolvedBaseUrl, apiKey);
+  }, [apiKey, providerId, resolvedBaseUrl, baseUrlReady, modelsAvailable]);
 
-    return () => clearTimeout(timer);
-  }, [apiKey, providerId, resolvedBaseUrl, baseUrlReady]);
+  // Сверка выбранной модели со списком: модель, которой нет в готовом
+  // списке, очищается (покрывает и смену baseUrl, и смену ключа).
+  // Только очистка — авто-выбор модели не делается. Корректировка
+  // состояния во время рендера при смене записи кэша — рекомендованный
+  // React-паттерн вместо setState в эффекте
+  const modelsEntry = useModelsStore((state) =>
+    state.entries[modelsCacheKey(resolvedBaseUrl, apiKey)],
+  );
+  const [prevModelsEntry, setPrevModelsEntry] = useState(modelsEntry);
+
+  if (prevModelsEntry !== modelsEntry) {
+    setPrevModelsEntry(modelsEntry);
+
+    const selected = model.trim();
+
+    if (
+      modelsEntry?.status === "ready" &&
+      selected !== "" &&
+      !modelsEntry.models.includes(selected)
+    ) {
+      setModel("");
+    }
+  }
 
   const handleAdd = useCallback(async () => {
     // Повторное нажатие во время анимации очистки — защита от двойного add
     if (isClearing) return;
 
     const parsed = createApiTemplateFormSchema({
-      baseUrlRequired: isManual,
+      baseUrlRequired: !isTrusted,
     }).safeParse({
       name,
       provider: providerId,
@@ -140,7 +186,8 @@ export function useTemplateForm() {
         setName("");
         setModel("");
         setApiKeyState("");
-        setManualBaseUrl("");
+        setBaseUrlState("");
+        lastAutoBaseUrlRef.current = "";
         setIsClearing(false);
       }, API_TAB_ANIMATION.formFadeOut);
     } catch (error) {
@@ -162,9 +209,8 @@ export function useTemplateForm() {
     resolvedBaseUrl,
     model,
     apiKey,
-    isManual,
+    isTrusted,
     isClearing,
-    setManualBaseUrl,
   ]);
 
   return {
@@ -174,12 +220,11 @@ export function useTemplateForm() {
     setModel,
     apiKey,
     setApiKey,
-    providerLabel: detect.provider?.label,
+    baseUrl,
+    setBaseUrl,
     resolvedBaseUrl,
-    isManual,
-    manualBaseUrl,
-    setManualBaseUrl,
     baseUrlReady,
+    modelsAvailable,
     isClearing,
     canSubmit,
     handleAdd,

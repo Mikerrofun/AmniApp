@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-import { getModelsFetcher } from "./models-fetcher";
+import { getModelsFetcher } from "../fetchers/models-fetcher";
 import type { ModelsState } from "./models-store.types";
 
 export const modelsCacheKey = (baseUrl: string, apiKey: string): string =>
@@ -65,5 +65,13 @@ export const useModelsStore = create<ModelsState>((set, get) => ({
 
       return { entries };
     });
+  },
+
+  receiveModels: (baseUrl, apiKey, models) => {
+    const key = modelsCacheKey(baseUrl, apiKey);
+
+    set((state) => ({
+      entries: { ...state.entries, [key]: { status: "ready", models } },
+    }));
   },
 }));

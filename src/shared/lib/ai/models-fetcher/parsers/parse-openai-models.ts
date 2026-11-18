@@ -1,4 +1,4 @@
-import type { ProviderModelsResponse } from "../models-fetcher.types";
+import type { ProviderModelsResponse } from "../fetchers/models-fetcher.types";
 
 /**
  * Нормализует список моделей из ответа провайдера: берет `data[].id`,

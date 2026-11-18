@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 
-import { fetchAvailableModels } from '../models-fetcher';
-import { resolveProvider } from './provider-detect';
+import { getModelsFetcher, useModelsStore } from '../../models-fetcher';
+import { resolveProvider } from '../detect/provider-detect';
 import type { ProviderDetectState } from './provider-detect-store.types';
 
 // Контроллеры in-flight probe — несериализуемое состояние вне стора
@@ -31,7 +31,7 @@ export const useProviderDetectStore = create<ProviderDetectState>(
 
       const result = await resolveProvider(
         apiKey,
-        fetchAvailableModels,
+        (providerId) => getModelsFetcher(providerId),
         controller.signal,
       );
 
@@ -58,6 +58,15 @@ export const useProviderDetectStore = create<ProviderDetectState>(
               : { status: result.status },
         },
       }));
+
+      // Модели победителя коллизии уже получены probe — пишем их в
+      // models-store, чтобы ensureModels не дублировал запрос. В entry
+      // детекта models не хранятся: единственный кэш списков — models-store
+      if (result.status === 'resolved' && result.models.length > 0) {
+        useModelsStore
+          .getState()
+          .receiveModels(result.baseUrl, apiKey, result.models);
+      }
     },
 
     cancelKey: (apiKey) => {
