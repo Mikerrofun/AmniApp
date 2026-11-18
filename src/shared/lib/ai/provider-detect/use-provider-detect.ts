@@ -4,20 +4,37 @@ import { getProviderConfig } from '@/shared/config/providers.config';
 
 import { PROVIDER_DETECT_DEBOUNCE_MS } from './provider-detect.config';
 import { useProviderDetectStore } from './provider-detect-store';
+import { isPasteLikeInsertion } from './paste-detection';
 import type { UseProviderDetectResult } from './use-provider-detect.types';
 
 /**
- * Автоопределение провайдера по вставленному ключу: debounce из конфига
- * детекта, запуск ensureDetect, отмена in-flight probe при смене ключа.
- * Повторная вставка того же ключа берется из кэша стора — запроса нет.
+ * Автоопределение провайдера по ключу: debounce из конфига детекта
+ * фильтрует посимвольный ввод, вставка/автозаполнение запускают
+ * ensureDetect сразу. Отмена in-flight probe при смене ключа. Повторная
+ * вставка того же ключа берется из кэша стора — запроса нет.
  */
 export function useProviderDetect(apiKey: string): UseProviderDetectResult {
   const trimmed = apiKey.trim();
 
   const entry = useProviderDetectStore((state) => state.entries[trimmed]);
 
+  // Предыдущее значение для эвристики вставки: переход оценивается
+  // один раз на каждое изменение, флаг одноразовый по построению
+  const previousValueRef = useRef('');
+
   useEffect(() => {
-    if (trimmed === '') return;
+    if (trimmed === '') {
+      previousValueRef.current = '';
+      return;
+    }
+
+    const pasted = isPasteLikeInsertion(previousValueRef.current, trimmed);
+    previousValueRef.current = trimmed;
+
+    if (pasted) {
+      void useProviderDetectStore.getState().ensureDetect(trimmed);
+      return;
+    }
 
     const timer = setTimeout(() => {
       void useProviderDetectStore.getState().ensureDetect(trimmed);

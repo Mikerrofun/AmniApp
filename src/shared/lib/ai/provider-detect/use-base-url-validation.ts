@@ -7,6 +7,7 @@ import {
 } from '../models-fetcher';
 
 import { PROVIDER_DETECT_DEBOUNCE_MS } from './provider-detect.config';
+import { isPasteLikeInsertion } from './paste-detection';
 import { useProviderDetect } from './use-provider-detect';
 import type {
   UseBaseUrlValidationParams,
@@ -46,12 +47,21 @@ export function useBaseUrlValidation({
   } | null>(null);
   const probeControllerRef = useRef<AbortController | null>(null);
 
+  // Предыдущий probeKey для эвристики вставки: вставка ключа или baseUrl
+  // запускает probe сразу, посимвольный ввод — через debounce
+  const previousProbeKeyRef = useRef('');
+
   useEffect(() => {
+    // Ref обновляется во всех ветках: переход оценивается один раз на
+    // каждое изменение пары, доверенные/пустые состояния не «помнят» вставку
+    const pasted = isPasteLikeInsertion(previousProbeKeyRef.current, probeKey);
+    previousProbeKeyRef.current = probeKey;
+
     if (trusted) return;
 
     if (trimmedBaseUrl === '' || apiKey.trim() === '') return;
 
-    const timer = setTimeout(() => {
+    const runProbe = () => {
       probeControllerRef.current?.abort();
       const controller = new AbortController();
       probeControllerRef.current = controller;
@@ -91,7 +101,17 @@ export function useBaseUrlValidation({
           modelsAvailable: false,
         });
       })();
-    }, PROVIDER_DETECT_DEBOUNCE_MS);
+    };
+
+    if (pasted) {
+      runProbe();
+
+      return () => {
+        probeControllerRef.current?.abort();
+      };
+    }
+
+    const timer = setTimeout(runProbe, PROVIDER_DETECT_DEBOUNCE_MS);
 
     return () => {
       clearTimeout(timer);

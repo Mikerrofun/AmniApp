@@ -6,6 +6,7 @@ export {
   PROVIDER_DETECT_DEBOUNCE_MS,
   PROVIDER_DETECT_MIN_KEY_LENGTH,
 } from './provider-detect.config';
+export { isPasteLikeInsertion } from './paste-detection';
 export { useProviderDetectStore } from './provider-detect-store';
 export { useProviderDetect } from './use-provider-detect';
 export { useBaseUrlValidation } from './use-base-url-validation';
