@@ -66,4 +66,12 @@ export const useModelsStore = create<ModelsState>((set, get) => ({
       return { entries };
     });
   },
+
+  receiveModels: (baseUrl, apiKey, models) => {
+    const key = modelsCacheKey(baseUrl, apiKey);
+
+    set((state) => ({
+      entries: { ...state.entries, [key]: { status: "ready", models } },
+    }));
+  },
 }));

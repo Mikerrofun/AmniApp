@@ -30,3 +30,11 @@ export type FetchModelsResult =
 export type ModelsFetcher = (
   params: FetchAvailableModelsParams,
 ) => Promise<FetchModelsResult>;
+
+/**
+ * Результат fallback-проверки совместимости endpoint без GET /models:
+ * успех — строго HTTP 200 (тело не валидируется)
+ */
+export type ProbeChatCompletionsResult =
+  | { ok: true }
+  | { ok: false; reason: FetchModelsErrorReason };

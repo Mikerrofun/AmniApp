@@ -8,13 +8,15 @@ import {
 
 import type { ModelsFetcher } from '../../src/shared/lib/ai/models-fetcher/models-fetcher.types';
 
-/** Фетчер, который не должен вызываться (детект без probe) */
-const noCallFetcher: ModelsFetcher = () => {
-  throw new Error('fetchAvailableModels should not be called');
+/** Резолвер, который не должен вызываться (детект без probe) */
+const noCallResolver = () => {
+  throw new Error('resolveFetcher should not be called');
 };
 
-const okFetcher: ModelsFetcher = () =>
-  Promise.resolve({ ok: true, models: ['model-a'] });
+const okFetcherWith =
+  (models: string[]): ModelsFetcher =>
+  () =>
+    Promise.resolve({ ok: true, models });
 
 const failFetcher: ModelsFetcher = () =>
   Promise.resolve({ ok: false, reason: 'unauthorized' });
@@ -62,42 +64,69 @@ describe('matchProviders', () => {
 });
 
 describe('resolveProvider', () => {
-  it('один кандидат — resolved без запроса', async () => {
+  it('один кандидат — resolved без запроса, models пустой', async () => {
     const result = await resolveProvider(
       'sk-ant-' + 'a'.repeat(20),
-      noCallFetcher,
+      noCallResolver,
     );
 
     assert.deepEqual(result, {
       status: 'resolved',
       providerId: 'anthropic',
       baseUrl: 'https://api.anthropic.com/v1',
+      models: [],
     });
   });
 
-  it('коллизия — первый успешный probe побеждает', async () => {
-    const result = await resolveProvider('sk-' + 'a'.repeat(20), okFetcher);
+  it('коллизия — победитель probe возвращает свои models', async () => {
+    const result = await resolveProvider(
+      'sk-' + 'a'.repeat(20),
+      (providerId) =>
+        providerId === 'openai'
+          ? okFetcherWith(['gpt-4o'])
+          : failFetcher,
+    );
 
-    assert.equal(result.status, 'resolved');
+    assert.deepEqual(result, {
+      status: 'resolved',
+      providerId: 'openai',
+      baseUrl: 'https://api.openai.com/v1',
+      models: ['gpt-4o'],
+    });
   });
 
   it('коллизия — все probe неуспешны, failed', async () => {
-    const result = await resolveProvider('sk-' + 'a'.repeat(20), failFetcher);
+    const result = await resolveProvider(
+      'sk-' + 'a'.repeat(20),
+      () => failFetcher,
+    );
 
     assert.deepEqual(result, { status: 'failed' });
+  });
+
+  it('коллизия — probe идет фетчером конкретного кандидата', async () => {
+    const calledWith: string[] = [];
+
+    await resolveProvider('sk-' + 'a'.repeat(20), (providerId) => {
+      calledWith.push(providerId);
+
+      return failFetcher;
+    });
+
+    assert.deepEqual(calledWith.sort(), ['deepseek', 'openai']);
   });
 
   it('неизвестный префикс — unknown', async () => {
     const result = await resolveProvider(
       'xyz_' + 'a'.repeat(20),
-      noCallFetcher,
+      noCallResolver,
     );
 
     assert.deepEqual(result, { status: 'unknown' });
   });
 
   it('короткий ключ — unknown без запроса', async () => {
-    const result = await resolveProvider('sk-short', noCallFetcher);
+    const result = await resolveProvider('sk-short', noCallResolver);
 
     assert.deepEqual(result, { status: 'unknown' });
   });

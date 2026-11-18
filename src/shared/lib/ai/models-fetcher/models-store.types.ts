@@ -23,4 +23,10 @@ export type ModelsState = {
   ) => Promise<void>;
   /** Абортит in-flight запрос по ключу и удаляет запись кэша */
   cancelKey: (baseUrl: string, apiKey: string) => void;
+  /**
+   * Записывает готовый список моделей в кэш: probe коллизии или ручного
+   * baseUrl уже получил модели — ensureModels увидит ready и не будет
+   * дублировать запрос.
+   */
+  receiveModels: (baseUrl: string, apiKey: string, models: string[]) => void;
 };

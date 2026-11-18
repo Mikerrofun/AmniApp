@@ -12,3 +12,15 @@ export const GEMINI_MODELS_URL =
 
 /** Нативный endpoint списка моделей Cohere (не OpenAI-совместимый) */
 export const COHERE_MODELS_URL = "https://api.cohere.ai/v1/models";
+
+/** Суффикс fallback-проверки совместимости endpoint */
+export const CHAT_COMPLETIONS_PATH = "/chat/completions";
+
+/**
+ * Минимальное dummy-тело fallback-проверки: тело не валидируется,
+ * но без model часть серверов отвечает 400 вместо 200
+ */
+export const CHAT_COMPLETIONS_PROBE_BODY = JSON.stringify({
+  model: "probe",
+  messages: [{ role: "user", content: "ping" }],
+});

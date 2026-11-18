@@ -5,8 +5,11 @@ export {
   fetchCohereModels,
   fetchGeminiModels,
   getModelsFetcher,
+  probeChatCompletions,
 } from './models-fetcher';
 export {
+  CHAT_COMPLETIONS_PATH,
+  CHAT_COMPLETIONS_PROBE_BODY,
   COHERE_MODELS_URL,
   GEMINI_MODELS_URL,
   MODELS_FETCH_DEBOUNCE_MS,
@@ -18,6 +21,7 @@ export type {
   FetchModelsErrorReason,
   FetchModelsResult,
   ModelsFetcher,
+  ProbeChatCompletionsResult,
   ProviderModelItem,
   ProviderModelsResponse,
 } from './models-fetcher.types';
