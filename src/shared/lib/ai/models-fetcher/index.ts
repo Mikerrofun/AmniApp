@@ -12,7 +12,6 @@ export {
   CHAT_COMPLETIONS_PROBE_BODY,
   COHERE_MODELS_URL,
   GEMINI_MODELS_URL,
-  MODELS_FETCH_DEBOUNCE_MS,
   MODELS_REQUEST_TIMEOUT_MS,
 } from './models-fetcher.config';
 export { modelsCacheKey, useModelsStore } from './models-store';

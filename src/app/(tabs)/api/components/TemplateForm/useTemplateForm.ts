@@ -5,7 +5,6 @@ import { createApiTemplateFormSchema } from "@/schemas/api-template";
 import { showToast } from "@/shared/components/ui/Toast";
 import { useT } from "@/shared/i18n";
 import {
-  MODELS_FETCH_DEBOUNCE_MS,
   modelsCacheKey,
   useModelsStore,
 } from "@/shared/lib/ai/models-fetcher";
@@ -107,10 +106,11 @@ export function useTemplateForm() {
     [apiKey, resolvedBaseUrl],
   );
 
-  // Авто-запрос списка моделей: после остановки ввода, когда baseUrl
-  // проверен и endpoint отдал список. При fallback-only endpoint запросать
+  // Авто-запрос списка моделей: сразу, как только baseUrl проверен и
+  // endpoint отдал список — второй debounce не нужен, ввод ключа уже
+  // отфильтрован debounce детекта. При fallback-only endpoint запросать
   // список бессмысленно. Повторный вызов повторного запроса не делает
-  // (кэш стора по baseUrl|apiKey).
+  // (кэш стора по baseUrl|apiKey + in-flight дедупликация).
   useEffect(() => {
     if (
       !apiKey.trim() ||
@@ -121,13 +121,9 @@ export function useTemplateForm() {
       return;
     }
 
-    const timer = setTimeout(() => {
-      void useModelsStore
-        .getState()
-        .ensureModels(providerId, resolvedBaseUrl, apiKey);
-    }, MODELS_FETCH_DEBOUNCE_MS);
-
-    return () => clearTimeout(timer);
+    void useModelsStore
+      .getState()
+      .ensureModels(providerId, resolvedBaseUrl, apiKey);
   }, [apiKey, providerId, resolvedBaseUrl, baseUrlReady, modelsAvailable]);
 
   // Сверка выбранной модели со списком: модель, которой нет в готовом

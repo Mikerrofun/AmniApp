@@ -3,9 +3,6 @@
 /** Таймаут запроса GET /models */
 export const MODELS_REQUEST_TIMEOUT_MS = 10000;
 
-/** Задержка после остановки ввода ключа перед авто-запросом списка */
-export const MODELS_FETCH_DEBOUNCE_MS = 1000;
-
 /** Нативный endpoint списка моделей Gemini (не OpenAI-совместимый) */
 export const GEMINI_MODELS_URL =
   "https://generativelanguage.googleapis.com/v1beta/models";
