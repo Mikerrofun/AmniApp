@@ -6,15 +6,15 @@ export {
   fetchGeminiModels,
   getModelsFetcher,
   probeChatCompletions,
-} from './models-fetcher';
+} from './fetchers/models-fetcher';
 export {
   CHAT_COMPLETIONS_PATH,
   CHAT_COMPLETIONS_PROBE_BODY,
   COHERE_MODELS_URL,
   GEMINI_MODELS_URL,
   MODELS_REQUEST_TIMEOUT_MS,
-} from './models-fetcher.config';
-export { modelsCacheKey, useModelsStore } from './models-store';
+} from './fetchers/models-fetcher.config';
+export { modelsCacheKey, useModelsStore } from './store/models-store';
 export type {
   FetchAvailableModelsParams,
   FetchModelsErrorReason,
@@ -23,5 +23,5 @@ export type {
   ProbeChatCompletionsResult,
   ProviderModelItem,
   ProviderModelsResponse,
-} from './models-fetcher.types';
-export type { ModelsCacheEntry, ModelsState, ModelsStatus } from './models-store.types';
+} from './fetchers/models-fetcher.types';
+export type { ModelsCacheEntry, ModelsState, ModelsStatus } from './store/models-store.types';

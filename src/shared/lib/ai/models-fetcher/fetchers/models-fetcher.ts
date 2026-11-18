@@ -1,9 +1,9 @@
 import { fetch } from "expo/fetch";
 
-import { parseAnthropicModelList } from "./parsers/parse-anthropic-models";
-import { parseCohereModelList } from "./parsers/parse-cohere-models";
-import { parseGeminiModelList } from "./parsers/parse-gemini-models";
-import { parseOpenaiModelList } from "./parsers/parse-openai-models";
+import { parseAnthropicModelList } from "../parsers/parse-anthropic-models";
+import { parseCohereModelList } from "../parsers/parse-cohere-models";
+import { parseGeminiModelList } from "../parsers/parse-gemini-models";
+import { parseOpenaiModelList } from "../parsers/parse-openai-models";
 import {
   CHAT_COMPLETIONS_PATH,
   CHAT_COMPLETIONS_PROBE_BODY,

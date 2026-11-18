@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 
-import { getModelsFetcher, useModelsStore } from '../models-fetcher';
-import { resolveProvider } from './provider-detect';
+import { getModelsFetcher, useModelsStore } from '../../models-fetcher';
+import { resolveProvider } from '../detect/provider-detect';
 import type { ProviderDetectState } from './provider-detect-store.types';
 
 // Контроллеры in-flight probe — несериализуемое состояние вне стора

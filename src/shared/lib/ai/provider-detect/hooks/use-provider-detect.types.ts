@@ -1,6 +1,6 @@
 import type { ApiProviderConfig } from '@/shared/config/config.types';
 
-import type { ProviderDetectStatus } from './provider-detect-store.types';
+import type { ProviderDetectStatus } from '../store/provider-detect-store.types';
 
 /** Результат хука автоопределения провайдера по ключу */
 export type UseProviderDetectResult = {

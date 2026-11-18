@@ -4,9 +4,9 @@ import { describe, it } from 'node:test';
 import {
   matchProviders,
   resolveProvider,
-} from '../../src/shared/lib/ai/provider-detect/provider-detect';
+} from '../../src/shared/lib/ai/provider-detect/detect/provider-detect';
 
-import type { ModelsFetcher } from '../../src/shared/lib/ai/models-fetcher/models-fetcher.types';
+import type { ModelsFetcher } from '../../src/shared/lib/ai/models-fetcher/fetchers/models-fetcher.types';
 
 /** Резолвер, который не должен вызываться (детект без probe) */
 const noCallResolver = () => {

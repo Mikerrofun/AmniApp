@@ -2,9 +2,9 @@ import { useEffect, useRef } from 'react';
 
 import { getProviderConfig } from '@/shared/config/providers.config';
 
-import { PROVIDER_DETECT_DEBOUNCE_MS } from './provider-detect.config';
-import { useProviderDetectStore } from './provider-detect-store';
-import { isPasteLikeInsertion } from './paste-detection';
+import { PROVIDER_DETECT_DEBOUNCE_MS } from '../detect/provider-detect.config';
+import { useProviderDetectStore } from '../store/provider-detect-store';
+import { isPasteLikeInsertion } from '@/shared/lib/input';
 import type { UseProviderDetectResult } from './use-provider-detect.types';
 
 /**

@@ -4,10 +4,10 @@ import {
   getModelsFetcher,
   probeChatCompletions,
   useModelsStore,
-} from "../models-fetcher";
+} from "../../models-fetcher";
 
-import { isPasteLikeInsertion } from "./paste-detection";
-import { PROVIDER_DETECT_DEBOUNCE_MS } from "./provider-detect.config";
+import { isPasteLikeInsertion } from "@/shared/lib/input";
+import { PROVIDER_DETECT_DEBOUNCE_MS } from "../detect/provider-detect.config";
 import type {
   UseBaseUrlValidationParams,
   UseBaseUrlValidationResult,

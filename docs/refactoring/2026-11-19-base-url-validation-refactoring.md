@@ -1,7 +1,7 @@
 ---
 
 **Дата:** 19.11.2026
-**Теги:** #refactoring #api-templates #provider-detect #forms
+**Теги:** #refactoring #api-templates #provider-detect #forms #structure
 
 ---
 
@@ -13,6 +13,8 @@
 - **provider-detect** — `resolveProvider` принимает резолвер фетчеров по provider id; победитель коллизии возвращает свои models, стор сразу пишет их в models-store.
 - **useBaseUrlValidation** — параметр `mode` убран: один механизм «доверие / probe» для любого происхождения baseUrl, результат дополнен флагом `modelsAvailable`.
 - **useTemplateForm + TemplateForm** — поле baseUrl одно и всегда видимо с авто-префиллом из реестра; сверка выбранной модели со списком; второй debounce перед запросом моделей удален.
+- **paste-детект** — вставка/автозаполнение распознаются по переходу значения и запускают детект и probe без debounce; посимвольный ввод фильтруется debounce как раньше.
+- **структура** — `models-fetcher` и `provider-detect` разбиты на подпапки по ответственности; эвристика вставки вынесена в `shared/lib/input`.
 
 ---
 
@@ -28,10 +30,10 @@
 
 #### 1.1. probeChatCompletions
 
-**Файл:** `src/shared/lib/ai/models-fetcher/models-fetcher.ts`
+**Файл:** `src/shared/lib/ai/models-fetcher/fetchers/models-fetcher.ts`
 
 ```ts
-// src/shared/lib/ai/models-fetcher/models-fetcher.ts
+// src/shared/lib/ai/models-fetcher/fetchers/models-fetcher.ts
 export async function probeChatCompletions({
   baseUrl,
   apiKey,
@@ -62,10 +64,10 @@ export async function probeChatCompletions({
 
 #### 1.2. receiveModels в models-store
 
-**Файл:** `src/shared/lib/ai/models-fetcher/models-store.ts`
+**Файл:** `src/shared/lib/ai/models-fetcher/store/models-store.ts`
 
 ```ts
-// src/shared/lib/ai/models-fetcher/models-store.ts
+// src/shared/lib/ai/models-fetcher/store/models-store.ts
 receiveModels: (baseUrl, apiKey, models) => {
   const key = modelsCacheKey(baseUrl, apiKey);
 
@@ -91,10 +93,10 @@ receiveModels: (baseUrl, apiKey, models) => {
 
 #### 2.1. Резолвер фетчеров вместо одного фетчера
 
-**Файл:** `src/shared/lib/ai/provider-detect/provider-detect.ts`
+**Файл:** `src/shared/lib/ai/provider-detect/detect/provider-detect.ts`
 
 ```ts
-// src/shared/lib/ai/provider-detect/provider-detect.ts
+// src/shared/lib/ai/provider-detect/detect/provider-detect.ts
 export async function resolveProvider(
   apiKey: string,
   resolveFetcher: (providerId: string) => ModelsFetcher,
@@ -118,10 +120,10 @@ export async function resolveProvider(
 
 #### 2.2. Модели победителя — сразу в models-store
 
-**Файл:** `src/shared/lib/ai/provider-detect/provider-detect-store.ts`
+**Файл:** `src/shared/lib/ai/provider-detect/store/provider-detect-store.ts`
 
 ```ts
-// src/shared/lib/ai/provider-detect/provider-detect-store.ts
+// src/shared/lib/ai/provider-detect/store/provider-detect-store.ts
 // Модели победителя коллизии уже получены probe — пишем их в
 // models-store, чтобы ensureModels не дублировал запрос. В entry
 // детекта models не хранятся: единственный кэш списков — models-store
@@ -148,10 +150,10 @@ if (result.status === 'resolved' && result.models.length > 0) {
 
 #### 3.1. Trusted-пара вместо mode
 
-**Файл:** `src/shared/lib/ai/provider-detect/use-base-url-validation.ts`
+**Файл:** `src/shared/lib/ai/provider-detect/hooks/use-base-url-validation.ts`
 
 ```ts
-// src/shared/lib/ai/provider-detect/use-base-url-validation.ts
+// src/shared/lib/ai/provider-detect/hooks/use-base-url-validation.ts
 const trusted =
   detect.status === 'resolved' &&
   detect.baseUrl !== undefined &&
@@ -166,10 +168,10 @@ if (trusted) {
 
 #### 3.2. Каскад probe для не-trusted пары
 
-**Файл:** `src/shared/lib/ai/provider-detect/use-base-url-validation.ts`
+**Файл:** `src/shared/lib/ai/provider-detect/hooks/use-base-url-validation.ts`
 
 ```ts
-// src/shared/lib/ai/provider-detect/use-base-url-validation.ts
+// src/shared/lib/ai/provider-detect/hooks/use-base-url-validation.ts
 const modelsResult = await getModelsFetcher(detect.provider?.id ?? '')({
   baseUrl: trimmedBaseUrl,
   apiKey,
@@ -311,31 +313,191 @@ useEffect(() => {
 
 ---
 
+## Часть 5: paste-детект — вставка без debounce
+
+### Проблема(ы)
+
+**Проблема 1:** debounce детекта (1000 мс) ждал и после вставки готового ключа — вставка не требует фильтрации ввода, это чистая секунда задержки до resolved и списка моделей.
+
+**Проблема 2:** то же для probe baseUrl: вставка нового ключа при отредактированном baseUrl или вставка самого baseUrl заново ждали debounce, хотя значение уже финальное.
+
+### Решения
+
+#### 5.1. Эвристика isPasteLikeInsertion
+
+**Файл:** `src/shared/lib/input/paste-detection.ts`
+
+```ts
+// src/shared/lib/input/paste-detection.ts
+export function isPasteLikeInsertion(
+  previous: string,
+  next: string,
+): boolean {
+  if (next.length > previous.length + 1) return true;
+  if (next.length === previous.length) return false;
+
+  return !next.startsWith(previous) && !previous.startsWith(next);
+}
+```
+
+**Логика:** в React Native у TextInput нет события `onPaste`, а чтение буфера обмена требует разрешений и системного диалога на iOS — поэтому вставка (и автозаполнение менеджером паролей, это тоже готовый ввод) распознается по характеру перехода значения: рост больше чем на один символ за раз, либо расхождение старого и нового в обе стороны при изменении длины (замена целиком, вставка в середину). Посимвольный ввод, удаление (включая зажатый backspace — предыдущее значение остается префиксом) и замена одного символа той же длины считаются вводом. Ложное «вставка» безвредно: запрос просто уйдет без задержки, дедупликация и кеш сторов поглотят повтор. Утилита живет в `shared/lib/input` — это общий механизм ввода, не логика детекта.
+
+#### 5.2. Мгновенный детект при вставке ключа
+
+**Файл:** `src/shared/lib/ai/provider-detect/hooks/use-provider-detect.ts`
+
+```ts
+// src/shared/lib/ai/provider-detect/hooks/use-provider-detect.ts
+const previousValueRef = useRef('');
+
+useEffect(() => {
+  if (trimmed === '') {
+    previousValueRef.current = '';
+    return;
+  }
+
+  const pasted = isPasteLikeInsertion(previousValueRef.current, trimmed);
+  previousValueRef.current = trimmed;
+
+  if (pasted) {
+    void useProviderDetectStore.getState().ensureDetect(trimmed);
+    return; // мгновенная ветка: таймер ниже не создается
+  }
+
+  const timer = setTimeout(() => {
+    void useProviderDetectStore.getState().ensureDetect(trimmed);
+  }, PROVIDER_DETECT_DEBOUNCE_MS);
+
+  return () => clearTimeout(timer);
+}, [trimmed]);
+```
+
+**Логика:** ветки взаимоисключающие: `return` после мгновенного вызова завершает эффект, таймер не создается — дублирования вызова нет. Ref хранит предыдущее значение, переход оценивается один раз на каждое изменение — «одноразовость» флага по построению, пробрасывать флаг вставки из формы не нужно. Сигнатура хука не изменилась.
+
+#### 5.3. Мгновенный probe при вставке
+
+**Файл:** `src/shared/lib/ai/provider-detect/hooks/use-base-url-validation.ts`
+
+```ts
+// src/shared/lib/ai/provider-detect/hooks/use-base-url-validation.ts
+const previousProbeKeyRef = useRef('');
+
+useEffect(() => {
+  // Ref обновляется во всех ветках: доверенные/пустые состояния
+  // не «помнят» вставку
+  const pasted = isPasteLikeInsertion(previousProbeKeyRef.current, probeKey);
+  previousProbeKeyRef.current = probeKey;
+
+  if (trusted) return;
+  if (trimmedBaseUrl === '' || apiKey.trim() === '') return;
+
+  const runProbe = () => { /* каскад GET /models → POST /chat/completions */ };
+
+  if (pasted) {
+    runProbe();
+    return () => probeControllerRef.current?.abort();
+  }
+
+  const timer = setTimeout(runProbe, PROVIDER_DETECT_DEBOUNCE_MS);
+  return () => {
+    clearTimeout(timer);
+    probeControllerRef.current?.abort();
+  };
+}, [trusted, trimmedBaseUrl, apiKey, probeKey, detect.provider?.id]);
+```
+
+**Логика:** probe ключуется парой «baseUrl|ключ», поэтому эвристика применяется к `probeKey`: вставка любого из слагаемых (ключ при отредактированном baseUrl, сам baseUrl) запускает probe сразу, посимвольный ввод baseUrl — через debounce. Ref обновляется во всех ветках, включая trusted и пустые, чтобы следующий реальный переход оценивался от актуального значения. Аборт in-flight при смене входов и размонтировании сохранен в обеих ветках.
+
+---
+
+## Часть 6: структура — подпапки по ответственности
+
+### Проблема(ы)
+
+**Проблема 1:** в `models-fetcher` фетчеры, стор и парсеры лежали в одной папке — файлы `models-fetcher.ts` и `models-store.ts` рядом не отражали разницу слоев (сеть vs кеш).
+
+**Проблема 2:** в `provider-detect` в одной папке лежали чистая логика детекта, стор, два хука и эвристика вставки — переплетение разнородной логики в одной плоскости.
+
+### Решения
+
+#### 6.1. Итоговая структура
+
+```
+src/shared/lib/
+  input/                        — общие механизмы ввода
+    index.ts
+    paste-detection.ts
+  ai/
+    models-fetcher/
+      index.ts                  — бочка (публичный API не изменился)
+      fetchers/                 — сеть: fetchAvailableModels, нативные
+        models-fetcher.ts         фетчеры, probeChatCompletions
+        models-fetcher.config.ts
+        models-fetcher.types.ts
+      store/                    — кеш списков моделей
+        models-store.ts
+        models-store.types.ts
+      parsers/                  — парсеры ответов провайдеров
+        parse-anthropic-models.ts
+        parse-cohere-models.ts
+        parse-gemini-models.ts
+        parse-openai-models.ts
+    provider-detect/
+      index.ts                  — бочка (публичный API не изменился)
+      detect/                   — чистая логика: matchProviders, resolveProvider
+        provider-detect.ts
+        provider-detect.types.ts
+        provider-detect.config.ts
+      store/                    — стор результатов детекта
+        provider-detect-store.ts
+        provider-detect-store.types.ts
+      hooks/                    — React-хуки формы
+        use-provider-detect.ts
+        use-provider-detect.types.ts
+        use-base-url-validation.ts
+        use-base-url-validation.types.ts
+```
+
+**Логика:** все потребители импортируют через бочки `@/shared/lib/ai/models-fetcher` и `@/shared/lib/ai/provider-detect` — их публичный API не изменился, снаружи не поменялось ничего. Внутри папок обновлены только относительные пути; `paste-detection` переехал в `shared/lib/input` как общий механизм ввода. Тесты обновили глубокие импорты (`detect/provider-detect`, `fetchers/models-fetcher.types`).
+
+---
+
 ## Итоги
 
-### Изменённые файлы (14 шт)
+### Изменённые файлы (23 шт)
 
 **models-fetcher:**
-1. `src/shared/lib/ai/models-fetcher/models-fetcher.ts` — добавлен `probeChatCompletions` (fallback POST /chat/completions, успех = HTTP 200)
-2. `src/shared/lib/ai/models-fetcher/models-fetcher.config.ts` — `CHAT_COMPLETIONS_PATH`, `CHAT_COMPLETIONS_PROBE_BODY`; удален `MODELS_FETCH_DEBOUNCE_MS`
-3. `src/shared/lib/ai/models-fetcher/models-fetcher.types.ts` — тип `ProbeChatCompletionsResult`
-4. `src/shared/lib/ai/models-fetcher/models-store.ts` — действие `receiveModels`
-5. `src/shared/lib/ai/models-fetcher/models-store.types.ts` — тип действия `receiveModels`
-6. `src/shared/lib/ai/models-fetcher/index.ts` — экспорт нового API через бочку
+1. `src/shared/lib/ai/models-fetcher/index.ts` — бочка: пути на подпапки
+2. `src/shared/lib/ai/models-fetcher/fetchers/models-fetcher.ts` — добавлен `probeChatCompletions`; перенесен в `fetchers/`
+3. `src/shared/lib/ai/models-fetcher/fetchers/models-fetcher.config.ts` — `CHAT_COMPLETIONS_PATH`, `CHAT_COMPLETIONS_PROBE_BODY`; удален `MODELS_FETCH_DEBOUNCE_MS`
+4. `src/shared/lib/ai/models-fetcher/fetchers/models-fetcher.types.ts` — тип `ProbeChatCompletionsResult`
+5. `src/shared/lib/ai/models-fetcher/store/models-store.ts` — действие `receiveModels`; перенесен в `store/`
+6. `src/shared/lib/ai/models-fetcher/store/models-store.types.ts` — тип действия `receiveModels`
+7. `src/shared/lib/ai/models-fetcher/parsers/parse-anthropic-models.ts` — путь импорта типов
+8. `src/shared/lib/ai/models-fetcher/parsers/parse-openai-models.ts` — путь импорта типов
 
 **provider-detect:**
-7. `src/shared/lib/ai/provider-detect/provider-detect.ts` — `resolveProvider` принимает резолвер фетчеров; победитель коллизии возвращает models
-8. `src/shared/lib/ai/provider-detect/provider-detect.types.ts` — `models: string[]` в варианте `resolved`
-9. `src/shared/lib/ai/provider-detect/provider-detect-store.ts` — резолвер `getModelsFetcher`, запись моделей в models-store после гвардии
-10. `src/shared/lib/ai/provider-detect/use-base-url-validation.ts` — единый механизм «доверие / probe», каскад GET /models → POST /chat/completions
-11. `src/shared/lib/ai/provider-detect/use-base-url-validation.types.ts` — `mode`/`manualBaseUrl` убраны, добавлен `modelsAvailable`
+9. `src/shared/lib/ai/provider-detect/index.ts` — бочка: пути на подпапки, экспорт paste-утилиты убран
+10. `src/shared/lib/ai/provider-detect/detect/provider-detect.ts` — резолвер фетчеров; models победителя в результате
+11. `src/shared/lib/ai/provider-detect/detect/provider-detect.types.ts` — `models: string[]` в варианте `resolved`
+12. `src/shared/lib/ai/provider-detect/detect/provider-detect.config.ts` — без изменений по содержанию
+13. `src/shared/lib/ai/provider-detect/store/provider-detect-store.ts` — запись моделей в models-store после гвардии
+14. `src/shared/lib/ai/provider-detect/store/provider-detect-store.types.ts` — путь импорта результата
+15. `src/shared/lib/ai/provider-detect/hooks/use-provider-detect.ts` — мгновенный детект при вставке
+16. `src/shared/lib/ai/provider-detect/hooks/use-provider-detect.types.ts` — путь импорта статуса
+17. `src/shared/lib/ai/provider-detect/hooks/use-base-url-validation.ts` — единый механизм «доверие / probe», каскад, мгновенный probe при вставке
+18. `src/shared/lib/ai/provider-detect/hooks/use-base-url-validation.types.ts` — `mode`/`manualBaseUrl` убраны, добавлен `modelsAvailable`
+
+**shared/lib/input:**
+19. `src/shared/lib/input/paste-detection.ts` — новый: эвристика `isPasteLikeInsertion`
+20. `src/shared/lib/input/index.ts` — новый: бочка
 
 **форма:**
-12. `src/app/(tabs)/api/components/TemplateForm/useTemplateForm.ts` — единое `baseUrl`, префилл через ref, сверка модели, запрос моделей без debounce
-13. `src/app/(tabs)/api/components/TemplateForm/TemplateForm.tsx` — providerLabel удален, поле baseUrl всегда видно без анимаций
+21. `src/app/(tabs)/api/components/TemplateForm/useTemplateForm.ts` — единое `baseUrl`, префилл через ref, сверка модели, запрос моделей без debounce
+22. `src/app/(tabs)/api/components/TemplateForm/TemplateForm.tsx` — providerLabel удален, поле baseUrl всегда видно без анимаций
 
 **тесты:**
-14. `tests/api-templates/provider-detect.test.ts` — обновлен под резолвер: single-кандидат без запроса, победитель коллизии возвращает свои models
+23. `tests/api-templates/provider-detect.test.ts` — обновлен под резолвер и новые пути
 
 ### Результаты
 
@@ -345,6 +507,8 @@ useEffect(() => {
 - ✅ Поле baseUrl всегда видно и редактируемо: авто-значение подставляется, пока поле не тронуто; правка юзера уходит в probe, UI не прыгает
 - ✅ Выбранная модель сверяется со списком текущей пары и очищается, если в нем её нет
 - ✅ Модели грузятся сразу после resolved — второй debounce перед запросом удален
+- ✅ Вставка/автозаполнение ключа и baseUrl идут без debounce — минус ~1 с до resolved и списка моделей; ручной ввод по-прежнему фильтруется
+- ✅ Публичный API бочек не изменился — реструктуризация не затронула ни одного потребителя
 
 ---
 
@@ -352,6 +516,6 @@ useEffect(() => {
 
 - **Один источник правды** — единственный кэш списков моделей это models-store; в entry детекта models не дублируются.
 - **Статус существует, только если на нем ветвится логика** — промежуточные статусы не вводились, ключение вердикта парой входов делает idle автоматическим.
-- **Переиспользование вместо нового** — таймаут, паттерн AbortController, debounce и гвардия устаревшего ответа взяты из существующего кода; новое писалось только там, где пусто (probe, receiveModels, trusted-ветка).
-- **Слои не смешиваются** — типы в `*.types.ts`, константы в `*.config.ts`, логика в чистых модулях, наружу — через бочки `index.ts`.
+- **Переиспользование вместо нового** — таймаут, паттерн AbortController, debounce и гвардия устаревшего ответа взяты из существующего кода; новое писалось только там, где пусто (probe, receiveModels, trusted-ветка, эвристика вставки).
+- **Слои не смешиваются** — типы в `*.types.ts`, константы в `*.config.ts`, логика в чистых модулях, наружу — через бочки `index.ts`; внутри папки — подпапки по ответственности (сеть / кеш / парсеры / хуки).
 - **Surgical Changes** — ModelSelect, схема, парсеры и `handleAdd` не переписывались: изменились только точки, затронутые новым потоком данных.
