@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+import {
+  RetryableError,
+  withRetry,
+} from "../../../shared/lib/net";
+
 import { EMBEDDING_MODEL, EMBEDDINGS_BASE_URL } from "./embeddings.config";
 import type {
     EmbeddingsClient,
@@ -32,25 +37,36 @@ export function createEmbeddingsClient(
     texts: string[],
     signal?: AbortSignal,
   ): Promise<EmbeddingVector[] | null> => {
-    const response = await fetch(`${config.baseUrl}/embeddings`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${config.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: config.model,
-        input: texts,
-      }),
-      signal,
-    });
+    // POST /embeddings — чистая идемпотентная функция, ретрай безопасен.
+    // 4xx (невалидный ключ и т.п.) — наверх сразу, ретраятся только
+    // сеть/таймаут/5xx/429. Внешний abort — без ретрая.
+    const response = await withRetry(
+      async () => {
+        const attempt = await fetch(`${config.baseUrl}/embeddings`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${config.apiKey}`,
+          },
+          body: JSON.stringify({
+            model: config.model,
+            input: texts,
+          }),
+          signal,
+        });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(
-        `Jina embeddings request failed: ${response.status} - ${errorText}`,
-      );
-    }
+        if (!attempt.ok) {
+          const errorText = await attempt.text();
+          throw new RetryableError(
+            `Jina embeddings request failed: ${attempt.status} - ${errorText}`,
+            attempt.status,
+          );
+        }
+
+        return attempt;
+      },
+      { signal },
+    );
 
     const parsed = jinaResponseSchema.parse(await response.json());
 
