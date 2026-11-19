@@ -1,5 +1,10 @@
 import { fetch } from "expo/fetch";
 
+import {
+  RetryableError,
+  isRetryableStatus,
+  withRetry,
+} from "../../../net";
 import { parseAnthropicModelList } from "../parsers/parse-anthropic-models";
 import { parseCohereModelList } from "../parsers/parse-cohere-models";
 import { parseGeminiModelList } from "../parsers/parse-gemini-models";
@@ -13,6 +18,7 @@ import {
 } from "./models-fetcher.config";
 import type {
   FetchAvailableModelsParams,
+  FetchInit,
   FetchModelsErrorReason,
   FetchModelsResult,
   ModelsFetcher,
@@ -20,17 +26,14 @@ import type {
 } from "./models-fetcher.types";
 
 /**
- * Общая механика нативных запросов списка моделей: таймаут + внешний
- * abort, классификация ошибок в FetchModelsResult. Парсинг ответа —
- * у вызывающего фетчера.
+ * Одна попытка запроса: контроллер на каждую попытку — таймаут попытки
+ * ретраится, внешний abort нет (его проверяет withRetry).
  */
-async function fetchProviderJson(
+async function fetchWithTimeout(
   url: string,
-  headers: Record<string, string>,
+  init: FetchInit,
   signal?: AbortSignal,
-): Promise<
-  { ok: true; payload: unknown } | { ok: false; reason: FetchModelsErrorReason }
-> {
+) {
   const controller = new AbortController();
   const onExternalAbort = () => controller.abort();
 
@@ -42,10 +45,48 @@ async function fetchProviderJson(
   );
 
   try {
-    const response = await fetch(url, {
-      headers,
-      signal: controller.signal,
-    });
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+    signal?.removeEventListener("abort", onExternalAbort);
+  }
+}
+
+/** 5xx/429/408 — бросаем, чтобы withRetry сделал ретрай */
+function throwIfRetryableStatus(status: number): void {
+  if (isRetryableStatus(status)) {
+    throw new RetryableError(`HTTP ${status}`, status);
+  }
+}
+
+function classifyFetchError(
+  error: unknown,
+  signal?: AbortSignal,
+): { ok: false; reason: FetchModelsErrorReason } {
+  if (signal?.aborted) return { ok: false, reason: "other" };
+
+  return {
+    ok: false,
+    reason: error instanceof TypeError ? "network" : "other",
+  };
+}
+
+/** Общий запрос JSON-списка моделей: ретрай + классификация ошибок */
+async function fetchProviderJson(
+  url: string,
+  headers: Record<string, string>,
+  signal?: AbortSignal,
+): Promise<
+  { ok: true; payload: unknown } | { ok: false; reason: FetchModelsErrorReason }
+> {
+  try {
+    const response = await withRetry(async () => {
+      const attempt = await fetchWithTimeout(url, { headers }, signal);
+
+      throwIfRetryableStatus(attempt.status);
+
+      return attempt;
+    }, { signal });
 
     if (response.status === 401 || response.status === 403) {
       return { ok: false, reason: "unauthorized" };
@@ -57,46 +98,28 @@ async function fetchProviderJson(
 
     return { ok: true, payload: await response.json() };
   } catch (error) {
-    if (controller.signal.aborted) {
-      return { ok: false, reason: "other" };
-    }
-
-    return {
-      ok: false,
-      reason: error instanceof TypeError ? "network" : "other",
-    };
-  } finally {
-    clearTimeout(timeout);
-    signal?.removeEventListener("abort", onExternalAbort);
+    return classifyFetchError(error, signal);
   }
 }
 
-/**
- * Дефолтный (OpenAI-совместимый) фетчер: нативный fetch с устройства
- * `GET {baseUrl}/models` с `Authorization: Bearer` (тот же паттерн,
- * что openai-compat-client — без бекенда, ключ никуда не логируется).
- * Ошибки классифицируются в результат, а не выбрасываются наверх.
- */
+/** Дефолтный OpenAI-совместимый фетчер: GET {baseUrl}/models с Bearer */
 export async function fetchAvailableModels({
   baseUrl,
   apiKey,
   signal,
 }: FetchAvailableModelsParams): Promise<FetchModelsResult> {
-  const controller = new AbortController();
-  const onExternalAbort = () => controller.abort();
-
-  signal?.addEventListener("abort", onExternalAbort);
-
-  const timeout = setTimeout(
-    () => controller.abort(),
-    MODELS_REQUEST_TIMEOUT_MS,
-  );
-
   try {
-    const response = await fetch(`${baseUrl}/models`, {
-      headers: { Authorization: `Bearer ${apiKey}` },
-      signal: controller.signal,
-    });
+    const response = await withRetry(async () => {
+      const attempt = await fetchWithTimeout(
+        `${baseUrl}/models`,
+        { headers: { Authorization: `Bearer ${apiKey}` } },
+        signal,
+      );
+
+      throwIfRetryableStatus(attempt.status);
+
+      return attempt;
+    }, { signal });
 
     if (response.status === 401 || response.status === 403) {
       return { ok: false, reason: "unauthorized" };
@@ -110,50 +133,35 @@ export async function fetchAvailableModels({
 
     return { ok: true, models: parseOpenaiModelList(payload) };
   } catch (error) {
-    if (controller.signal.aborted) {
-      return { ok: false, reason: "other" };
-    }
-
-    return {
-      ok: false,
-      reason: error instanceof TypeError ? "network" : "other",
-    };
-  } finally {
-    clearTimeout(timeout);
-    signal?.removeEventListener("abort", onExternalAbort);
+    return classifyFetchError(error, signal);
   }
 }
 
-/**
- * Fallback-проверка совместимости endpoint без GET /models: POST
- * `{baseUrl}/chat/completions`, успех — строго HTTP 200 (тело не
- * валидируем). Классификация ошибок повторяет fetchAvailableModels.
- */
+/** Fallback-проверка совместимости: POST /chat/completions, успех — 200 */
 export async function probeChatCompletions({
   baseUrl,
   apiKey,
   signal,
 }: FetchAvailableModelsParams): Promise<ProbeChatCompletionsResult> {
-  const controller = new AbortController();
-  const onExternalAbort = () => controller.abort();
-
-  signal?.addEventListener("abort", onExternalAbort);
-
-  const timeout = setTimeout(
-    () => controller.abort(),
-    MODELS_REQUEST_TIMEOUT_MS,
-  );
-
   try {
-    const response = await fetch(`${baseUrl}${CHAT_COMPLETIONS_PATH}`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: CHAT_COMPLETIONS_PROBE_BODY,
-      signal: controller.signal,
-    });
+    const response = await withRetry(async () => {
+      const attempt = await fetchWithTimeout(
+        `${baseUrl}${CHAT_COMPLETIONS_PATH}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: CHAT_COMPLETIONS_PROBE_BODY,
+        },
+        signal,
+      );
+
+      throwIfRetryableStatus(attempt.status);
+
+      return attempt;
+    }, { signal });
 
     if (response.status === 401 || response.status === 403) {
       return { ok: false, reason: "unauthorized" };
@@ -163,24 +171,11 @@ export async function probeChatCompletions({
       ? { ok: true }
       : { ok: false, reason: "other" };
   } catch (error) {
-    if (controller.signal.aborted) {
-      return { ok: false, reason: "other" };
-    }
-
-    return {
-      ok: false,
-      reason: error instanceof TypeError ? "network" : "other",
-    };
-  } finally {
-    clearTimeout(timeout);
-    signal?.removeEventListener("abort", onExternalAbort);
+    return classifyFetchError(error, signal);
   }
 }
 
-/**
- * Anthropic: нативный GET /models с `x-api-key` + `anthropic-version` —
- * не полагаемся на то, что compat-слой отдаёт /models в OpenAI-формате.
- */
+/** Anthropic: GET /models с x-api-key + anthropic-version */
 export async function fetchAnthropicModels({
   baseUrl,
   apiKey,
@@ -197,10 +192,7 @@ export async function fetchAnthropicModels({
   return { ok: true, models: parseAnthropicModelList(result.payload) };
 }
 
-/**
- * Gemini: нативный GET v1beta/models с ключом в query (`?key=`) —
- * compat-слой не гарантирует OpenAI-формат списка моделей.
- */
+/** Gemini: GET v1beta/models с ключом в query (?key=) */
 export async function fetchGeminiModels({
   apiKey,
   signal,
@@ -216,7 +208,7 @@ export async function fetchGeminiModels({
   return { ok: true, models: parseGeminiModelList(result.payload) };
 }
 
-/** Cohere: нативный GET /v1/models (Bearer), формат `models[].name` */
+/** Cohere: GET /v1/models (Bearer), формат models[].name */
 export async function fetchCohereModels({
   apiKey,
   signal,
@@ -232,7 +224,7 @@ export async function fetchCohereModels({
   return { ok: true, models: parseCohereModelList(result.payload) };
 }
 
-/** Нативные фетчеры провайдеров с не-OpenAI-совместимым списком моделей */
+/** Фетчеры провайдеров с не-OpenAI-совместимым списком моделей */
 export const MODELS_FETCHERS: Record<string, ModelsFetcher> = {
   anthropic: fetchAnthropicModels,
   gemini: fetchGeminiModels,

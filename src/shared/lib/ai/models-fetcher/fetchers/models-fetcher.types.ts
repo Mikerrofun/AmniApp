@@ -5,6 +5,13 @@ export type FetchAvailableModelsParams = {
   signal?: AbortSignal;
 };
 
+/** Минимальный набор опций нативного fetch, используемый фетчерами */
+export type FetchInit = {
+  method?: string;
+  headers?: Record<string, string>;
+  body?: string;
+};
+
 /** Элемент ответа провайдера GET /models (OpenAI-совместимый формат) */
 export type ProviderModelItem = {
   id?: unknown;

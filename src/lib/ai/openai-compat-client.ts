@@ -1,5 +1,6 @@
 import { fetch } from 'expo/fetch';
 
+import { isRetryableError, withRetry } from '@/shared/lib/net';
 import {
   chatCompletionChunkSchema,
   chatCompletionErrorSchema,
@@ -80,49 +81,67 @@ export async function streamChatCompletion(
   onText: (accumulatedText: string) => void,
   signal?: AbortSignal,
 ): Promise<string> {
-  const response = await fetch(`${config.baseUrl}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${config.apiKey}`,
+  // Ретрай только до первой дельты: после нее повтор продублирует текст.
+  // До первой дельты ретраятся сеть/таймаут/5xx/429 на начальном fetch —
+  // POST /chat/completions серверной стороны не мутирует. 4xx и внешний
+  // abort — наверх сразу.
+  let emitted = false;
+  const handleText = (text: string) => {
+    emitted = true;
+    onText(text);
+  };
+
+  const { reader, firstChunk } = await withRetry(
+    async () => {
+      const response = await fetch(`${config.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${config.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: config.model,
+          messages: config.messages,
+          stream: true,
+        }),
+        signal,
+      });
+
+      if (!response.ok) {
+        const raw = await response.text();
+        const apiMessage = extractApiMessage(raw);
+
+        throw new ChatCompletionError({
+          status: response.status,
+          message: apiMessage ?? (raw ? raw.slice(0, 300) : 'Request failed'),
+          partialText: '',
+        });
+      }
+
+      if (!response.body) {
+        throw new ChatCompletionError({
+          message: 'Response has no body',
+          partialText: '',
+        });
+      }
+
+      const attemptReader = response.body.getReader();
+      const firstRead = await attemptReader.read();
+
+      return { reader: attemptReader, firstChunk: firstRead };
     },
-    body: JSON.stringify({
-      model: config.model,
-      messages: config.messages,
-      stream: true,
-    }),
-    signal,
-  });
+    {
+      signal,
+      shouldRetry: (error) => !emitted && isRetryableError(error),
+    },
+  );
 
-  if (!response.ok) {
-    const raw = await response.text();
-    const apiMessage = extractApiMessage(raw);
-
-    throw new ChatCompletionError({
-      status: response.status,
-      message: apiMessage ?? (raw ? raw.slice(0, 300) : 'Request failed'),
-      partialText: '',
-    });
-  }
-
-  if (!response.body) {
-    throw new ChatCompletionError({
-      message: 'Response has no body',
-      partialText: '',
-    });
-  }
-
-  const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
   let accumulated = '';
   let done = false;
 
-  while (!done) {
-    const { value, done: streamDone } = await reader.read();
-
-    if (streamDone) break;
-
+  const handleChunk = (value: Uint8Array): void => {
     buffer += decoder.decode(value, { stream: true });
 
     const { payloads, rest, done: sawDone } = parseSseDataLines(buffer);
@@ -148,10 +167,20 @@ export async function streamChatCompletion(
 
         if (delta) {
           accumulated += delta;
-          onText(accumulated);
+          handleText(accumulated);
         }
       }
     }
+  };
+
+  if (!firstChunk.done) handleChunk(firstChunk.value);
+
+  while (!done) {
+    const { value, done: streamDone } = await reader.read();
+
+    if (streamDone) break;
+
+    handleChunk(value);
   }
 
   return accumulated;
