@@ -18,25 +18,16 @@ import {
 } from "./models-fetcher.config";
 import type {
   FetchAvailableModelsParams,
+  FetchInit,
   FetchModelsErrorReason,
   FetchModelsResult,
   ModelsFetcher,
   ProbeChatCompletionsResult,
 } from "./models-fetcher.types";
 
-/** Минимальный набор опций нативного fetch, используемый фетчерами */
-type FetchInit = {
-  method?: string;
-  headers?: Record<string, string>;
-  body?: string;
-};
-
 /**
- * Одна попытка запроса с таймаутом: внутренний контроллер абортится по
- * таймауту ИЛИ по внешнему signal. Ошибки (сеть/таймаут/внешний abort)
- * пробрасываются наверх — классификация остается снаружи, в фетчере.
- * Таймаут-контроллер создается на каждую попытку: таймаут одной попытки
- * ретраится, внешний abort — нет (withRetry проверяет внешний signal).
+ * Одна попытка запроса: контроллер на каждую попытку — таймаут попытки
+ * ретраится, внешний abort нет (его проверяет withRetry).
  */
 async function fetchWithTimeout(
   url: string,
@@ -61,14 +52,13 @@ async function fetchWithTimeout(
   }
 }
 
-/** 5xx/429/408 — ретраебельный сбой: бросаем, чтобы withRetry сделал ретрай */
+/** 5xx/429/408 — бросаем, чтобы withRetry сделал ретрай */
 function throwIfRetryableStatus(status: number): void {
   if (isRetryableStatus(status)) {
     throw new RetryableError(`HTTP ${status}`, status);
   }
 }
 
-/** Классификация ошибки попытки в FetchModelsResult (как раньше, снаружи ретрая) */
 function classifyFetchError(
   error: unknown,
   signal?: AbortSignal,
@@ -81,11 +71,7 @@ function classifyFetchError(
   };
 }
 
-/**
- * Общая механика нативных запросов списка моделей: ретрай (сеть/таймаут
- * попытки/5xx/429) + классификация ошибок в FetchModelsResult. Парсинг
- * ответа — у вызывающего фетчера.
- */
+/** Общий запрос JSON-списка моделей: ретрай + классификация ошибок */
 async function fetchProviderJson(
   url: string,
   headers: Record<string, string>,
@@ -116,12 +102,7 @@ async function fetchProviderJson(
   }
 }
 
-/**
- * Дефолтный (OpenAI-совместимый) фетчер: нативный fetch с устройства
- * `GET {baseUrl}/models` с `Authorization: Bearer` (тот же паттерн,
- * что openai-compat-client — без бекенда, ключ никуда не логируется).
- * Ошибки классифицируются в результат, а не выбрасываются наверх.
- */
+/** Дефолтный OpenAI-совместимый фетчер: GET {baseUrl}/models с Bearer */
 export async function fetchAvailableModels({
   baseUrl,
   apiKey,
@@ -156,11 +137,7 @@ export async function fetchAvailableModels({
   }
 }
 
-/**
- * Fallback-проверка совместимости endpoint без GET /models: POST
- * `{baseUrl}/chat/completions`, успех — строго HTTP 200 (тело не
- * валидируем). Классификация ошибок повторяет fetchAvailableModels.
- */
+/** Fallback-проверка совместимости: POST /chat/completions, успех — 200 */
 export async function probeChatCompletions({
   baseUrl,
   apiKey,
@@ -198,10 +175,7 @@ export async function probeChatCompletions({
   }
 }
 
-/**
- * Anthropic: нативный GET /models с `x-api-key` + `anthropic-version` —
- * не полагаемся на то, что compat-слой отдаёт /models в OpenAI-формате.
- */
+/** Anthropic: GET /models с x-api-key + anthropic-version */
 export async function fetchAnthropicModels({
   baseUrl,
   apiKey,
@@ -218,10 +192,7 @@ export async function fetchAnthropicModels({
   return { ok: true, models: parseAnthropicModelList(result.payload) };
 }
 
-/**
- * Gemini: нативный GET v1beta/models с ключом в query (`?key=`) —
- * compat-слой не гарантирует OpenAI-формат списка моделей.
- */
+/** Gemini: GET v1beta/models с ключом в query (?key=) */
 export async function fetchGeminiModels({
   apiKey,
   signal,
@@ -237,7 +208,7 @@ export async function fetchGeminiModels({
   return { ok: true, models: parseGeminiModelList(result.payload) };
 }
 
-/** Cohere: нативный GET /v1/models (Bearer), формат `models[].name` */
+/** Cohere: GET /v1/models (Bearer), формат models[].name */
 export async function fetchCohereModels({
   apiKey,
   signal,
@@ -253,7 +224,7 @@ export async function fetchCohereModels({
   return { ok: true, models: parseCohereModelList(result.payload) };
 }
 
-/** Нативные фетчеры провайдеров с не-OpenAI-совместимым списком моделей */
+/** Фетчеры провайдеров с не-OpenAI-совместимым списком моделей */
 export const MODELS_FETCHERS: Record<string, ModelsFetcher> = {
   anthropic: fetchAnthropicModels,
   gemini: fetchGeminiModels,
