@@ -17,14 +17,14 @@
 
 1. `src/features/chats/model/use-chat-actions.ts` — главный файл задачи: `sendMessage` содержит весь флоу отправки (оптимистичный пузырь → валидация шаблона/ключа → создание временного чата → стрим → атомарная запись notes → эмбеддинги). Сюда встраивается отмена.
 2. `src/features/chats/model/generation-store.ts` + `generation-store.types.ts` — глобальный стор генерации: `status` (`idle | streaming | error`), `pendingUserText`, `streamingText`. Одна генерация на приложение, стрим переживает переключение чатов.
-3. `src/lib/ai/openai-compat-client.ts` — `streamChatCompletion` **уже принимает** третий параметр `signal?: AbortSignal`, но вызывающий код его не передаёт. Механику abort дописывать не нужно — нужно только начать использовать.
+3. `src/lib/ai/openai-compat-client.ts` — `streamChatCompletion` уже принимает третий параметр `signal?: AbortSignal`, но вызывающий код его не передаёт. Механику abort дописывать не нужно — нужно только начать использовать.
 4. `src/app/(tabs)/chat/components/ChatContent/ChatInputArea/ChatInputArea.tsx` + `useChatInput.ts` — кнопка отправки (кружок/плюс), `canSend`, `isStreaming`. Сюда встраивается крестик.
 5. `src/features/chats/model/chats-store.ts` — `deleteChat`, `setDraft`, `setGlobalDraft`, `initTempChat`, `activeChatId`. Нужны для отката после отмены.
 6. `src/app/(tabs)/chat/components/ChatContent/ChatMessages/ChatMessages.tsx` — как рендерятся `pendingUserText` / `streamingText` / `errorText`; важно понимать, что исчезнет при отмене.
 7. `src/shared/i18n/messages/ru.json` и `en.json` — куда добавить ключ подписи кнопки отмены.
 8. `tests/` — существующие тесты на `node:test` + `tsx` (`npm test`), формат для минимальных тестов менеджера.
 
-Ключевой факт проекта: notes пишутся в БД **только после успешного стрима** (пара user+assistant атомарно). Поэтому «стереть запрос из БД» при отмене означает: ничего не записать + удалить временный чат, созданный до стрима.
+Ключевой факт проекта: notes пишутся в БД **только после успешного стрима** (пара user+assistant атомарно). Поэтому при отмене в БД ничего не попадает — нужно только удалить временный чат, созданный до стрима.
 
 ---
 
@@ -33,7 +33,7 @@
 **Блок A. Механика отмены (CommandManager)**
 
 1. Отправленный запрос нельзя прервать: `streamChatCompletion` поддерживает `AbortSignal`, но сигнал не передаётся, и фазы валидации/создания чата никак не прерываются.
-2. Нет переиспользуемого слоя управления долгими операциями (аналог CommandManager из телеграм-бота): реестр активных запусков, кооперативная отмена через `AbortController`, типизированная ошибка отмены.
+2. Нет переиспользуемого слоя управления долгими операциями: реестр активных запусков, кооперативная отмена через `AbortController`, типизированная ошибка отмены.
 
 **Блок B. Откат состояния при отмене**
 
@@ -65,7 +65,7 @@
 
 ## Правила оформления кода (для всех задач)
 
-- **Типизация** — только в файлах типов (`*.types.ts` рядом с логикой по FSD). В файлах с логикой — только импорты типов, никаких inline-объявлений структур, которые используются больше одного места.
+- **Типизация** — только в файлах типов (`*.types.ts` рядом с логикой по FSD). В файлах с логикой — только импорты типов; структуры, используемые больше одного места, не объявлять inline.
 - **Конфиги/константы** — в `*.config.ts` рядом с модулем (как `ChatSidebar.config.ts`, `use-chat-search.config.ts`).
 - **FSD** — CommandManager живёт в `shared/lib` (платформенно-независимый, без импортов из `features/` и `app/`); чат-специфичная логика остаётся в `features/chats`.
 - **Комментарии** — только на действительно неочевидных местах (например, почему `cancel()` не удаляет запись из реестра до `finally`). Не комментировать каждую строку.
@@ -78,30 +78,27 @@
 
 **Файлы:** `src/shared/lib/command-manager/command-manager.types.ts`, `command-manager.config.ts`, `command-manager.ts`, `index.ts`
 
-**Что делаем:** портируем паттерн CommandManager из телеграм-бота, адаптированный под RN. Это синглтон-класс без привязки к чатам — чистая механика «запуск + отмена».
+**Что делаем:** синглтон-класс управления долгими операциями: реестр активных запусков + кооперативная отмена через `AbortController`. Без привязки к чатам — чистая механика «запуск + отмена».
 
-**Флоу (что реализовать и на что ссылаться):**
+**Флоу (что реализовать):**
 
-- Структура повторяет бота (`src/shared/utils/CommandManager/CommandManager.ts` из старого проекта, описание в переписке): `activeCommands: Map<commandId, CommandState>` + `execute()` + `cancel()` + `checkCancelled()` + `CommandCancelledError`.
-- Отличия от бота, вынужденные платформой:
-  - **AsyncLocalStorage в RN нет** — commandId передаётся в хендлер явно (аргументом), а не через асинхронный контекст. `checkCancelled(commandId)` принимает id параметром.
-  - Ключ реестра — не `${userId}_${commandName}`, а имя команды из конфига. Для генерации чата — одна константа в `command-manager.config.ts` (например, `CHAT_GENERATION_COMMAND_ID = 'chat_generation'`): генерация в приложении одна глобальная (см. `generation-store`), совпадает с текущим ограничением «один стрим за раз».
-  - Нет `ctx`/`ctx.reply` из gramY — никаких сообщений менеджер не отправляет, только управляет жизненным циклом.
+- Состояние класса: `activeCommands: Map<commandId, CommandState>`, где `CommandState` — `controller: AbortController`, `startedAt: Date`.
+- Ключ реестра — имя команды из конфига. Для генерации чата — одна константа в `command-manager.config.ts` (например, `CHAT_GENERATION_COMMAND_ID = 'chat_generation'`): генерация в приложении одна глобальная (см. `generation-store`), совпадает с текущим ограничением «один стрим за раз».
 - `execute<T>(commandId, handler)`:
-  1. Если `commandId` уже в реестре — вернуть `{ status: 'already_running' }` (аналог блокировки per-user из бота; UI и так блокирует повторную отправку, это страховка).
-  2. Иначе создать `AbortController`, записать в реестр `CommandState` (`controller`, `startedAt`), запустить `handler({ signal, checkCancelled })`.
-  3. `finally` — безусловно удалить запись из реестра (как шаг 6 из бота: успех / отмена / ошибка — всегда).
-  4. Возвращаемый тип — дискриминированное объединение: `{ status: 'completed', value }` | `{ status: 'cancelled' }` | `{ status: 'already_running' }`. Ошибки хендлера не глотать — пробрасывать наружу (в чат-флоу ошибки обрабатывает `use-chat-actions`).
-- `cancel(commandId)`: найти запись, если сигнал ещё не прерван — `controller.abort(reason)`. **Критично (как в боте): `cancel()` НЕ удаляет запись из реестра** — она живёт до `finally` в `execute()`, иначе последующий `checkCancelled` не увидит `signal.aborted`.
-- `checkCancelled(commandId)`: если записи нет — no-op (тихий выход, как в боте); если `signal.aborted` — выбросить `CommandCancelledError` с reason из сигнала.
+  1. Если `commandId` уже в реестре — вернуть `{ status: 'already_running' }`, хендлер не запускать (страховка от параллельного запуска; UI и так блокирует повторную отправку).
+  2. Иначе создать `AbortController`, записать `CommandState` в реестр, запустить `handler({ signal, checkCancelled })` — commandId и инструменты отмены передаются хендлеру явно аргументом (асинхронного контекста в RN нет).
+  3. `finally` — безусловно удалить запись из реестра при любом исходе (успех / отмена / ошибка).
+  4. Возвращаемый тип — дискриминированное объединение: `{ status: 'completed', value: T }` | `{ status: 'cancelled' }` | `{ status: 'already_running' }`. Ошибки хендлера не глотать — пробрасывать наружу (в чат-флоу ошибки обрабатывает `use-chat-actions`).
+- `cancel(commandId): boolean`: найти запись, если сигнал ещё не прерван — `controller.abort(reason)` и вернуть `true`; иначе `false`. **Критично: `cancel()` НЕ удаляет запись из реестра** — она живёт до `finally` в `execute()`, иначе последующий `checkCancelled` не увидит `signal.aborted`.
+- `checkCancelled(commandId): void`: если записи нет — no-op (тихий выход); если `signal.aborted` — выбросить `CommandCancelledError` с reason из сигнала.
 - `isCancelled(commandId): boolean` — вспомогательный метод для различения abort-ошибки fetch от отмены (см. задачу 2).
-- `CommandCancelledError` — типизированный класс ошибки (аналог `ChatCompletionError` в `openai-compat-client.ts`): `name`, `reason`. Класс ошибки лежит в `command-manager.types.ts` рядом с типами либо в отдельном `command-manager.errors.ts` — по усмотрению, но не внутри файла логики.
+- `CommandCancelledError` — типизированный класс ошибки по образцу `ChatCompletionError` в `openai-compat-client.ts`: `name`, `reason`. Лежит в `command-manager.types.ts` рядом с типами либо в отдельном `command-manager.errors.ts` — но не внутри файла логики.
 - Типы (`CommandState`, `CommandExecuteResult`, тип хендлера) — в `command-manager.types.ts`; константы — в `command-manager.config.ts`; barrel — `index.ts`.
 
 **Проверка:**
 
 1. `npx tsc --noEmit` без ошибок.
-2. Модуль не импортирует ничего из `features/` и `app/` (проверить глазами импорты).
+2. Модуль не импортирует ничего из `features/` и `app/` (проверить импорты).
 
 ### Задача 2. Отмена в `sendMessage` (`use-chat-actions.ts`)
 
@@ -109,15 +106,15 @@
 
 **Что делаем:** весь пайплайн после `setPendingUser` заворачивается в `commandManager.execute(...)`, сигнал пробрасывается в `streamChatCompletion`, добавляется ветка тихого отката при отмене.
 
-**Флоу (что реализовать и на что ссылаться):**
+**Флоу (что реализовать):**
 
-- Текущий `sendMessage` (см. файл) после `setPendingUser(trimmed)` делает: валидация шаблона → чтение ключа → `initTempChat` → `getNotes` → `streamChatCompletion` → атомарная запись notes → эмбеддинги. Всё это становится телом хендлера внутри `commandManager.execute(CHAT_GENERATION_COMMAND_ID, handler)`. `rollbackUi` и ранние `return` с тостами остаются внутри хендлера — они не отмены, а обычные отказы.
-- Сигнал из хендлера передаётся третьим аргументом в `streamChatCompletion` (параметр уже существует, ссылка — `openai-compat-client.ts`).
+- Текущий `sendMessage` после `setPendingUser(trimmed)` делает: валидация шаблона → чтение ключа → `initTempChat` → `getNotes` → `streamChatCompletion` → атомарная запись notes → эмбеддинги. Всё это становится телом хендлера внутри `commandManager.execute(CHAT_GENERATION_COMMAND_ID, handler)`. `rollbackUi` и ранние `return` с тостами остаются внутри хендлера — они не отмены, а обычные отказы.
+- Сигнал из хендлера передаётся третьим аргументом в `streamChatCompletion` (параметр уже существует, см. `openai-compat-client.ts`).
 - **Контрольные точки отмены** (вызовы `checkCancelled` из хендлера): после каждого `await` фазы валидации (шаблон, ключ) и после `initTempChat`/`getNotes` — до старта стрима. Во время стрима отмену обеспечивает сам `AbortSignal`: fetch бросит abort-ошибку, цикл чтения прервётся.
-- **Граница отмены — конец стрима.** После того как `streamChatCompletion` вернул полный текст, отмена больше не действует: атомарная запись пары user+assistant (существующий код с `deleteNote`-откатом) выполняется без контрольных точек. Это соответствует требованию «прерывается, только если ещё не завершился полностью».
-- **Различение отмены и ошибки:** в catch хендлера — если `commandManager.isCancelled(...)` либо пойман `CommandCancelledError`, либо abort-ошибка fetch при прерванном сигнале — пробросить/пометить как отмену (НЕ ветка `fail()`). Иначе — существующая ветка ошибки (`generation.fail`, `setDraft`, toast) без изменений.
+- **Граница отмены — конец стрима.** После того как `streamChatCompletion` вернул полный текст, отмена больше не действует: атомарная запись пары user+assistant (существующий код с `deleteNote`-откатом) выполняется без контрольных точек. Требование: прерывается, только если генерация ещё не завершилась полностью.
+- **Различение отмены и ошибки:** в catch хендлера — если пойман `CommandCancelledError`, либо `commandManager.isCancelled(...)`, либо abort-ошибка fetch при прерванном сигнале — пометить как отмену (НЕ ветка `fail()`). Иначе — существующая ветка ошибки (`generation.fail`, `setDraft`, toast) без изменений.
 - **Ветка отмены в `sendMessage`** (после того как `execute` вернул `{ status: 'cancelled' }`), всё тихо, без тостов и плашек:
-  1. Сбросить `generation-store` в idle (существующий `finish()`/`reset()` — `pendingUserText: null`, `streamingText: ''`), чтобы оптимистичный пузырь и стрим-пузырь исчезли (рендер — `ChatMessages.tsx`).
+  1. Сбросить `generation-store` в idle (существующий `finish()`/`reset()`: `pendingUserText: null`, `streamingText: ''`), чтобы оптимистичный пузырь и стрим-пузырь исчезли (рендер — `ChatMessages.tsx`).
   2. Если исходный `chatId` был не null (существующий чат): `setDraft(chatId, trimmed)` — текст возвращается в черновик этого чата.
   3. Если исходный `chatId` был null (временный чат): удалить созданный хендлером чат через `deleteChat(targetChatId)` из `chats-store` (в нём гарантированно нет notes — запись не начиналась), вернуть текст в глобальный черновик `setGlobalDraft(trimmed)` и убедиться, что пользователь остаётся во временном чате: если `activeChatId === targetChatId`, сбросить `activeChatId` в `null`. Проверить в `chats-store.ts`, есть ли готовый экшен для сброса `activeChatId`; если нет — добавить минимальный экшен (тип — в `chats-store.types.ts`).
   4. Частичный текст стрима просто выбрасывается — он нигде не сохранялся.
@@ -138,10 +135,10 @@
 
 **Что делаем:** на время генерации кнопка отправки заменяется крестиком отмены.
 
-**Флоу (что реализовать и на что ссылаться):**
+**Флоу (что реализовать):**
 
-- В `useChatInput` уже вычисляется `isStreaming` (`status === 'streaming' || pendingUserText !== null`) — это и есть окно крестика, покрывает весь пайплайн (решение: отмена доступна с момента отправки). Добавить `cancelGeneration` из `useChatActions` и вернуть из хука `handleCancel` (вызов без условий — крестик физически виден только пока `isStreaming`).
-- В `ChatInputArea.tsx` в существующем `Pressable` кнопки (справа, ссылка на текущий блок «Кнопка отправки»): если `isStreaming` — рендерить иконку `X` из `lucide-react-native` (уже используется в проекте: `KeyRound`, `Plus`), `onPress={handleCancel}`; иначе — текущее поведение (кружок/плюс, `onPress={handleSend}`, `disabled={!canSend}`).
+- В `useChatInput` уже вычисляется `isStreaming` (`status === 'streaming' || pendingUserText !== null`) — это и есть окно крестика, покрывает весь пайплайн (отмена доступна с момента отправки). Добавить `cancelGeneration` из `useChatActions` и вернуть из хука `handleCancel` (вызов без условий — крестик физически виден только пока `isStreaming`).
+- В `ChatInputArea.tsx` в существующем `Pressable` кнопки (справа, блок «Кнопка отправки»): если `isStreaming` — рендерить иконку `X` из `lucide-react-native` (пакет уже используется: `KeyRound`, `Plus`), `onPress={handleCancel}`; иначе — текущее поведение (кружок/плюс, `onPress={handleSend}`, `disabled={!canSend}`).
 - Accessibility: `accessibilityLabel` — новый i18n-ключ `chatInput.cancel` (ru: «Отменить запрос», en: «Cancel request»); добавить ключ в оба файла сообщений по образцу существующих `chatInput.*`.
 - Стили крестика — в рамках текущей капсулы (`h-9 w-9 rounded-full`), цвет из `colors` (`src/shared/config/colors.ts`), без новых дизайн-токенов.
 - Комментарии не добавлять — замена иконки очевидна.
@@ -158,7 +155,7 @@
 
 **Что делаем:** минимальный набор на `node:test` + `tsx` (формат — как существующие тесты в `tests/`, запуск `npm test`). Только чистая механика менеджера, без чат-флоу — не перегружать.
 
-**Флоу (что покрыть — ровно 3 кейса, по аналогии с тестами CommandManager из бота):**
+**Флоу (что покрыть — ровно 3 кейса):**
 
 1. **Регистрация и cleanup:** `execute` с быстрым хендлером возвращает `{ status: 'completed', value }`, после завершения повторный `execute` не возвращает `already_running` (реестр чист).
 2. **Отмена:** хендлер останавливается на управляемом промисе-шлюзе после контрольной точки `checkCancelled`; снаружи вызывается `cancel`; шлюз освобождается; `execute` возвращает `{ status: 'cancelled' }`, повторный `execute` снова работает (запись удалена в `finally`).
